@@ -120,13 +120,18 @@
         {% endif %}
         
         <ul class="navbar-nav ms-auto align-items-center d-flex flex-row gap-2">
-          {% if current_user.is_authenticated %}
+          <li class="nav-item">
+            <select class="form-select form-select-sm bg-transparent border-0 text-main canvas-theme-select" style="width: auto; cursor: pointer; font-size: 0.85rem; padding: 0.25rem 1.75rem 0.25rem 0.5rem; color: var(--text-main) !important;" onchange="changeCanvasTheme(this.value)" title="Choose Background Theme">
+              <option value="leaves" style="background-color: var(--bg-card); color: var(--text-main);">🌿 Leaves</option>
+              <option value="sakura" style="background-color: var(--bg-card); color: var(--text-main);">🌸 Sakura</option>
+              <option value="nebula" style="background-color: var(--bg-card); color: var(--text-main);">🌌 Nebula</option>
+            </select>
+          </li>
           <li class="nav-item">
             <button id="calm-toggle" class="btn px-2" title="Toggle Calm Mode" aria-label="Toggle Calm Mode">
               <i class="bi bi-wind"></i>
             </button>
           </li>
-          {% endif %}
           <li class="nav-item">
             <button id="theme-toggle" class="btn px-2" title="Toggle Theme" aria-label="Toggle Theme">
               <i class="bi bi-moon-stars-fill"></i>

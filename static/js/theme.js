@@ -10,11 +10,10 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    // Sync canvas theme select dropdown if it exists on the page
-    const canvasThemeSelect = document.getElementById("canvas-theme-select");
-    if (canvasThemeSelect) {
-      canvasThemeSelect.value = localStorage.getItem("leaflore-canvas-theme") || "leaves";
-    }
+    // Sync all canvas theme select dropdowns if they exist on the page
+    document.querySelectorAll(".canvas-theme-select").forEach(select => {
+      select.value = localStorage.getItem("leaflore-canvas-theme") || "leaves";
+    });
 
     // Add calm-mode class to body as well to ensure standard targets match
     if (currentCalm === "enabled") {
@@ -109,5 +108,8 @@
     if (window.LeafCanvas) {
       window.LeafCanvas.setTheme(theme);
     }
+    document.querySelectorAll(".canvas-theme-select").forEach(select => {
+      select.value = theme;
+    });
   };
 })();
