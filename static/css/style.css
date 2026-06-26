@@ -138,6 +138,38 @@ a:hover {
   color: var(--primary-color) !important;
 }
 
+/* ---- Dropdown Menus ---- */
+.dropdown-menu {
+  background-color: var(--bg-card) !important;
+  backdrop-filter: var(--card-blur) !important;
+  -webkit-backdrop-filter: var(--card-blur) !important;
+  border: var(--card-border) !important;
+  box-shadow: var(--card-shadow) !important;
+  transition: background-color 0.4s ease, border-color 0.4s ease;
+}
+
+.dropdown-item {
+  color: var(--text-main) !important;
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+.dropdown-item.text-danger:hover, .dropdown-item.text-danger:focus {
+  background-color: var(--primary-color) !important;
+  color: #ff9999 !important;
+}
+
+.dropdown-divider {
+  border-top: 1px solid var(--border-color) !important;
+  opacity: 1 !important;
+}
+
+
 /* Custom styling for active nav-pills */
 .nav-pills .nav-link.active,
 .nav-pills .nav-link.active:hover,
