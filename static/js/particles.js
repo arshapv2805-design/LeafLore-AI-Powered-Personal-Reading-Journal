@@ -20,8 +20,8 @@
   const mouse = { x: null, y: null, radius: 120 };
 
   // Customization settings
-  let activeTheme = "leaves"; // 'leaves', 'sakura', 'nebula'
-  let speedMultiplier = 1.0;
+  let activeTheme = localStorage.getItem("leaflore-canvas-theme") || "leaves"; // 'leaves', 'sakura', 'nebula'
+  let speedMultiplier = parseFloat(localStorage.getItem("leaflore-canvas-speed")) || 1.0;
 
   // Click & Drag Wind gust physics
   let isDragging = false;
@@ -242,6 +242,7 @@
     setTheme: function (themeName) {
       if (["leaves", "sakura", "nebula"].includes(themeName)) {
         activeTheme = themeName;
+        localStorage.setItem("leaflore-canvas-theme", themeName);
         // Instantly force-refresh colors
         const colors = getThemeColors();
         particles.forEach(p => {
@@ -253,6 +254,7 @@
       const parsed = parseFloat(multiplier);
       if (!isNaN(parsed) && parsed >= 0.1 && parsed <= 5.0) {
         speedMultiplier = parsed;
+        localStorage.setItem("leaflore-canvas-speed", parsed);
       }
     },
     triggerGust: function (strengthX, strengthY) {

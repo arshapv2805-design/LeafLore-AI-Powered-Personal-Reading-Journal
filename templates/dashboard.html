@@ -1297,6 +1297,18 @@
       }
     });
 
+    // Initialize persistent canvas theme and speed selectors on dashboard load
+    const canvasThemeSelect = document.getElementById("canvas-theme-select");
+    if (canvasThemeSelect) {
+      canvasThemeSelect.value = localStorage.getItem("leaflore-canvas-theme") || "leaves";
+    }
+    const canvasSpeedSlider = document.getElementById("canvas-speed-slider");
+    if (canvasSpeedSlider) {
+      const savedSpeed = localStorage.getItem("leaflore-canvas-speed") || "1.0";
+      canvasSpeedSlider.value = savedSpeed;
+      document.getElementById("speed-val").textContent = parseFloat(savedSpeed).toFixed(1) + "x";
+    }
+
     // Auto-trigger onboarding if first time
     if (!localStorage.getItem("leaflore-onboarded")) {
       setTimeout(function() {
