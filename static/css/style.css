@@ -10,6 +10,7 @@
   --bg-navbar: rgba(255, 255, 255, 0.92);
   --text-main: #141A16;
   --text-muted: #45524B;
+  --text-secondary: var(--text-muted);
   --border-color: #D3CBB8;
   --primary-color: #206f19;
   --primary-hover: #154E11;
