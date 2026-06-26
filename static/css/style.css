@@ -1799,6 +1799,66 @@ html[data-theme="dark"] .table-light {
   color: var(--text-main) !important;
 }
 
+/* ---- Premium Range Slider Retheming ---- */
+.form-range::-webkit-slider-runnable-track {
+  background-color: var(--border-color) !important;
+  height: 6px;
+  border-radius: 3px;
+}
+.form-range::-moz-range-track {
+  background-color: var(--border-color) !important;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.form-range::-webkit-slider-thumb {
+  background-color: var(--primary-color) !important;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px; /* (6px track height - 16px thumb height)/2 */
+  border: 2px solid var(--bg-card) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  transition: transform 0.1s ease, background-color 0.2s ease !important;
+}
+.form-range::-moz-range-thumb {
+  background-color: var(--primary-color) !important;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--bg-card) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  transition: transform 0.1s ease, background-color 0.2s ease !important;
+}
+
+.form-range:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+.form-range:active::-moz-range-thumb {
+  transform: scale(1.2);
+}
+
+/* Disabled State Styling */
+.form-range:disabled::-webkit-slider-runnable-track {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+html[data-theme="light"] .form-range:disabled::-webkit-slider-runnable-track {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.form-range:disabled::-webkit-slider-thumb {
+  background-color: var(--text-muted) !important;
+  opacity: 0.5 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.form-range:disabled::-moz-range-thumb {
+  background-color: var(--text-muted) !important;
+  opacity: 0.5 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 
 
 
