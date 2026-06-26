@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Notes · {{ book.title }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('books.book_detail', book_id=book.id) }}" class="text-decoration-none small d-inline-flex align-items-center gap-1 mb-3">
+  <i class="bi bi-arrow-left"></i> Back to {{ book.title }}
+</a>
+
+<div class="row g-4" style="animation: fadeInUp 0.4s ease both;">
+  <!-- Note Entry Form Column -->
+  <div class="col-md-5">
+    <div class="card card-body border-0 p-4 sticky-md-top" style="top: 80px; z-index: 10;">
+      <h5 class="mb-3 text-primary fw-bold"><i class="bi bi-pencil-square"></i> Add a chapter note</h5>
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.chapter.label(class="form-label small fw-semibold text-secondary") }}
+          {{ form.chapter(class="form-control form-control-sm" + (" is-invalid" if form.chapter.errors else ""), placeholder="e.g. Chapter 7 — The Turn") }}
+          {% for err in form.chapter.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.content.label(class="form-label small fw-semibold text-secondary") }}
+          {{ form.content(class="form-control form-control-sm" + (" is-invalid" if form.content.errors else ""), rows=4, placeholder="Write your thoughts...") }}
+          {% for err in form.content.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+        </div>
+        <button type="submit" class="btn btn-success btn-sm w-100">Save note</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Timeline Column -->
+  <div class="col-md-7">
+    <div class="card card-body border-0 p-4">
+      <h5 class="mb-4 text-secondary fw-semibold"><i class="bi bi-journal-text"></i> Reading log timeline</h5>
+      
+      {% if notes %}
+        <div class="timeline ml-2">
+          {% for note in notes %}
+          <div class="timeline-item">
+            <div class="card card-body border-0 shadow-sm p-3 mb-2 bg-light bg-opacity-50">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <span class="badge bg-success-subtle text-success-emphasis fw-bold mb-2">{{ note.chapter }}</span>
+                <form method="POST" action="{{ url_for('notes.delete_note', note_id=note.id) }}"
+                      onsubmit="return confirm('Delete this note?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-link text-danger p-0" aria-label="Delete note">
+                    <i class="bi bi-trash-fill fs-6"></i>
+                  </button>
+                </form>
+              </div>
+              <p class="mb-2 text-main" style="font-size: 0.9rem;">{{ note.content }}</p>
+              <p class="text-secondary small mb-0" style="font-size: 0.75rem;">
+                <i class="bi bi-clock"></i> {{ note.created_at.strftime('%b %d, %Y %I:%M %p') }}
+              </p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5 my-auto text-secondary">
+          <i class="bi bi-journal-x fs-1 mb-2 text-muted"></i>
+          <p class="small mb-0">No notes written yet. Start your reading journal on the left!</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

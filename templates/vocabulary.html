@@ -1,0 +1,507 @@
+{% extends 'base.html' %}
+{% block title %}Word Bank · LeafLore{% endblock %}
+{% block content %}
+
+<style>
+  .word-card {
+    transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.3s ease;
+  }
+  .word-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  }
+  .context-quote {
+    background: rgba(78, 163, 116, 0.03);
+    border-left: 3px solid var(--primary-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0 0.35rem 0.35rem 0;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  html[data-theme="dark"] .context-quote {
+    background: rgba(78, 163, 116, 0.05);
+  }
+  .word-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* 3D Flipping Flashcard Styles */
+  .flashcard-perspective {
+    perspective: 1000px;
+    width: 100%;
+    max-width: 480px;
+    height: 300px;
+    margin: 0 auto;
+  }
+  .flashcard-inner {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    position: relative;
+  }
+  .flashcard-inner.flipped {
+    transform: rotateY(180deg);
+  }
+  .flashcard-front, .flashcard-back {
+    backface-visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 1rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    backdrop-filter: var(--card-blur);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.125));
+  }
+  .flashcard-back {
+    transform: rotateY(180deg);
+  }
+  html[data-theme="dark"] .flashcard-front, html[data-theme="dark"] .flashcard-back {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2" style="animation: fadeInUp 0.4s ease both;">
+  <div>
+    <h2 class="mb-1 text-primary">Your Word Bank</h2>
+    <p class="text-secondary mb-0">Collect interesting, unfamiliar, or key vocabulary words.</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if words %}
+      <button class="btn btn-outline-success d-flex align-items-center gap-2 shadow-sm animate-btn" onclick="startFlashcardStudy()">
+        <i class="bi bi-card-text"></i> Study Flashcards
+      </button>
+    {% endif %}
+    <button class="btn btn-success d-flex align-items-center gap-2 shadow-sm animate-btn" onclick="openAddWordModal()">
+      <i class="bi bi-plus-lg"></i> Add Word
+    </button>
+  </div>
+</div>
+
+<!-- Search and Filter Bar -->
+<div class="card card-body mb-4 border-0 shadow-sm" style="animation: fadeInUp 0.4s ease both; animation-delay: 0.05s;">
+  <form method="GET" class="row g-2 align-items-center">
+    <div class="col-md-5">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control form-control-sm border-start-0" placeholder="Search words or definitions..." value="{{ q }}">
+      </div>
+    </div>
+    <div class="col-md-4">
+      <select name="book_id" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="-1">All Books & Global</option>
+        <option value="0" {{ 'selected' if filter_book_id == 0 }}>Global Words Only</option>
+        {% for book in books %}
+          <option value="{{ book.id }}" {{ 'selected' if filter_book_id == book.id }}>{{ book.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-success btn-sm w-100">Apply Filters</button>
+      {% if q or filter_book_id is not none %}
+        <a href="{{ url_for('vocabulary.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Vocabulary Word Grid -->
+<div class="row g-3" style="animation: fadeInUp 0.4s ease both; animation-delay: 0.1s;">
+  {% if words %}
+    {% for word in words %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 word-card border-0 shadow-sm">
+          <div class="card-body p-4 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                <h4 class="mb-0 fw-bold text-primary" style="font-family: 'Fraunces', Georgia, serif;">{{ word.word }}</h4>
+                {% if word.book %}
+                  <span class="badge bg-success-subtle text-success-emphasis word-badge" data-bs-toggle="tooltip" title="Found in: {{ word.book.title }}">{{ word.book.title | truncate(15) }}</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis word-badge">Global</span>
+                {% endif %}
+              </div>
+              
+              <p class="text-secondary small mb-3" style="line-height: 1.5;">{{ word.definition }}</p>
+              
+              {% if word.context %}
+                <div class="context-quote mb-3">
+                  "{{ word.context }}"
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-light-subtle">
+              <span class="small text-muted" style="font-size: 0.75rem;">
+                {% if word.chapter_or_page %}
+                  <i class="bi bi-bookmark text-success me-1"></i>{{ word.chapter_or_page }}
+                {% else %}
+                  <i class="bi bi-clock-history me-1"></i>{{ word.created_at.strftime('%b %d, %Y') }}
+                {% endif %}
+              </span>
+              <div class="d-flex gap-2">
+                <button class="btn btn-link btn-sm p-0 text-secondary btn-edit-word" title="Edit" 
+                        data-id="{{ word.id }}"
+                        data-word="{{ word.word }}"
+                        data-definition="{{ word.definition }}"
+                        data-context="{{ word.context or '' }}"
+                        data-location="{{ word.chapter_or_page or '' }}"
+                        data-book="{{ word.book_id or -1 }}">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <form method="POST" action="{{ url_for('vocabulary.delete_word', word_id=word.id) }}" 
+                      onsubmit="return confirm('Remove &quot;{{ word.word }}&quot; from your Word Bank?');" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="Delete">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="col-12">
+      <div class="card card-body text-center py-5 border-0 shadow-sm my-4">
+        <div class="empty-state-icon-circle mb-3 mx-auto">
+          <i class="bi bi-spellcheck"></i>
+        </div>
+        <h5 class="fw-bold mb-1 text-primary">Your Word Bank is quiet</h5>
+        <p class="text-secondary small mb-4 mx-auto" style="max-width: 380px;">
+          {% if q or filter_book_id is not none %}
+            No vocabulary words matched your filters. Try clearing filters or searching for something else.
+          {% else %}
+            You haven't added any vocabulary words yet. Collect unfamiliar terms, definitions, and contexts as you read!
+          {% endif %}
+        </p>
+        {% if q or filter_book_id is not none %}
+          <a href="{{ url_for('vocabulary.index') }}" class="btn btn-outline-secondary btn-sm px-4 mx-auto">Clear Filters</a>
+        {% else %}
+          <button class="btn btn-success btn-sm px-4 gap-2 d-inline-flex align-items-center mx-auto" onclick="openAddWordModal()">
+            <i class="bi bi-plus-lg"></i> Collect your first word
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Word Modal Markup (Reused for Add and Edit) -->
+<div class="modal fade" id="wordModal" tabindex="-1" aria-labelledby="wordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow" style="background: var(--bg-card); backdrop-filter: var(--card-blur); border: var(--card-border) !important;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary" id="modal-title">Add Word to Bank</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" id="word-entry-form">
+        <div class="modal-body">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.word.label(class="form-label small fw-semibold") }}
+            {{ form.word(class="form-control form-control-sm", id="word", placeholder="e.g. Ephemeral") }}
+          </div>
+          <div class="mb-3">
+            {{ form.definition.label(class="form-label small fw-semibold") }}
+            {{ form.definition(class="form-control form-control-sm", id="definition", rows="3", placeholder="e.g. Lasting for a very short time.") }}
+          </div>
+          <div class="mb-3">
+            {{ form.context.label(class="form-label small fw-semibold") }}
+            {{ form.context(class="form-control form-control-sm", id="context", rows="2", placeholder="e.g. The beauty of the morning mist was ephemeral...") }}
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              {{ form.chapter_or_page.label(class="form-label small fw-semibold") }}
+              {{ form.chapter_or_page(class="form-control form-control-sm", id="chapter_or_page", placeholder="e.g. Page 42 or Ch. 3") }}
+            </div>
+            <div class="col-6 mb-3">
+              {{ form.book_id.label(class="form-label small fw-semibold") }}
+              {{ form.book_id(class="form-select form-select-sm", id="book_id") }}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          {{ form.submit(class="btn btn-success btn-sm", id="modal-submit-btn") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Flashcard Modal Markup -->
+<div class="modal fade" id="flashcardModal" tabindex="-1" aria-labelledby="flashcardModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow" style="background: var(--bg-card); backdrop-filter: var(--card-blur); border: var(--card-border) !important;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary" id="flashcardModalLabel">Study Flashcards</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-4">
+        <!-- Progress Indicator -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="small text-secondary fw-semibold" id="flashcard-progress-text">Card 1 of 5</span>
+          <div class="progress flex-grow-1 mx-3" style="height: 6px;">
+            <div class="progress-bar bg-success" role="progressbar" id="flashcard-progress-bar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <span class="small text-muted" id="flashcard-score-text">Learned: 0</span>
+        </div>
+
+        <!-- 3D Flipping Card Container -->
+        <div class="my-4 py-2">
+          <div class="flashcard-perspective">
+            <div class="flashcard-inner" id="flashcard-inner" onclick="flipFlashcard()">
+              <!-- Front Side -->
+              <div class="flashcard-front">
+                <span class="badge bg-success-subtle text-success-emphasis word-badge mb-3" id="flashcard-book-badge">Found in: Book Title</span>
+                <h2 class="mb-4 text-primary fw-bold" id="flashcard-word" style="font-family: 'Fraunces', Georgia, serif; font-size: 2.5rem;">Ephemeral</h2>
+                <p class="text-muted small mb-0"><i class="bi bi-arrow-repeat me-1"></i> Click / Tap card to flip and reveal definition</p>
+              </div>
+              <!-- Back Side -->
+              <div class="flashcard-back">
+                <h5 class="text-success fw-bold mb-3">Definition</h5>
+                <p class="text-primary fs-5 mb-4" id="flashcard-definition">Lasting for a very short time.</p>
+                <div class="w-100 px-3 py-2 rounded context-quote text-start mb-3 d-none" id="flashcard-context-container">
+                  <span class="small text-muted italic" id="flashcard-context">"The beauty of the morning mist was ephemeral..."</span>
+                </div>
+                <p class="text-muted small mb-0"><i class="bi bi-arrow-repeat me-1"></i> Click / Tap card to see front side</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+        <button class="btn btn-outline-secondary btn-sm" id="flashcard-prev-btn" onclick="prevFlashcard()">
+          <i class="bi bi-chevron-left me-1"></i> Previous
+        </button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" id="flashcard-incorrect-btn" onclick="markLearned(false)">
+            <i class="bi bi-x-circle me-1"></i> Need Practice
+          </button>
+          <button class="btn btn-success btn-sm" id="flashcard-correct-btn" onclick="markLearned(true)">
+            <i class="bi bi-check-circle me-1"></i> I Know This
+          </button>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" id="flashcard-next-btn" onclick="nextFlashcard()">
+          Next <i class="bi bi-chevron-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Flashcard state
+  let flashcardWords = [];
+  {% if words %}
+    {% for word in words %}
+      flashcardWords.push({
+        id: {{ word.id }},
+        word: {{ word.word | tojson }},
+        definition: {{ word.definition | tojson }},
+        context: {{ (word.context or '') | tojson }},
+        book_title: {{ (word.book.title if word.book else 'Global') | tojson }}
+      });
+    {% endfor %}
+  {% endif %}
+
+  let currentCardIndex = 0;
+  let learnedCount = 0;
+  const learnedStatus = {}; // Map of word.id -> boolean
+
+  function startFlashcardStudy() {
+    if (flashcardWords.length === 0) return;
+    currentCardIndex = 0;
+    // reset learned status
+    flashcardWords.forEach(w => {
+      learnedStatus[w.id] = false;
+    });
+    updateLearnedCount();
+    showCard(currentCardIndex);
+    
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("flashcardModal"));
+    modal.show();
+  }
+
+  function showCard(index) {
+    if (index < 0 || index >= flashcardWords.length) return;
+    
+    // Reset flip
+    const cardInner = document.getElementById("flashcard-inner");
+    cardInner.classList.remove("flipped");
+
+    const wordObj = flashcardWords[index];
+    
+    document.getElementById("flashcard-word").textContent = wordObj.word;
+    document.getElementById("flashcard-definition").textContent = wordObj.definition;
+    
+    const badge = document.getElementById("flashcard-book-badge");
+    badge.textContent = wordObj.book_title === 'Global' ? 'Global' : 'Found in: ' + wordObj.book_title;
+    if (wordObj.book_title === 'Global') {
+      badge.className = "badge bg-secondary-subtle text-secondary-emphasis word-badge mb-3";
+    } else {
+      badge.className = "badge bg-success-subtle text-success-emphasis word-badge mb-3";
+    }
+
+    const contextContainer = document.getElementById("flashcard-context-container");
+    if (wordObj.context) {
+      document.getElementById("flashcard-context").textContent = `"${wordObj.context}"`;
+      contextContainer.classList.remove("d-none");
+    } else {
+      contextContainer.classList.add("d-none");
+    }
+
+    // Update progress elements
+    document.getElementById("flashcard-progress-text").textContent = `Card ${index + 1} of ${flashcardWords.length}`;
+    const pct = ((index + 1) / flashcardWords.length) * 100;
+    document.getElementById("flashcard-progress-bar").style.width = pct + "%";
+    document.getElementById("flashcard-progress-bar").setAttribute("aria-valuenow", pct);
+
+    // Disable prev/next buttons at bounds
+    document.getElementById("flashcard-prev-btn").disabled = (index === 0);
+    document.getElementById("flashcard-next-btn").disabled = (index === flashcardWords.length - 1);
+    
+    // Update button states for I Know This / Need Practice
+    updateButtonStates();
+  }
+
+  function flipFlashcard() {
+    const cardInner = document.getElementById("flashcard-inner");
+    cardInner.classList.toggle("flipped");
+  }
+
+  function nextFlashcard() {
+    if (currentCardIndex < flashcardWords.length - 1) {
+      currentCardIndex++;
+      showCard(currentCardIndex);
+    }
+  }
+
+  function prevFlashcard() {
+    if (currentCardIndex > 0) {
+      currentCardIndex--;
+      showCard(currentCardIndex);
+    }
+  }
+
+  function markLearned(isLearned) {
+    const wordObj = flashcardWords[currentCardIndex];
+    learnedStatus[wordObj.id] = isLearned;
+    updateLearnedCount();
+    updateButtonStates();
+    
+    // Flip to definition first if they mark it as learned and it's not flipped
+    const cardInner = document.getElementById("flashcard-inner");
+    if (!cardInner.classList.contains("flipped")) {
+      cardInner.classList.add("flipped");
+      setTimeout(() => {
+        if (currentCardIndex < flashcardWords.length - 1) {
+          nextFlashcard();
+        }
+      }, 800);
+    } else {
+      if (currentCardIndex < flashcardWords.length - 1) {
+        nextFlashcard();
+      }
+    }
+  }
+
+  // Helper to update visual states of buttons
+  function updateLearnedCount() {
+    learnedCount = Object.values(learnedStatus).filter(Boolean).length;
+    document.getElementById("flashcard-score-text").textContent = `Learned: ${learnedCount}/${flashcardWords.length}`;
+  }
+
+  function updateButtonStates() {
+    const wordObj = flashcardWords[currentCardIndex];
+    const isLearned = learnedStatus[wordObj.id];
+    
+    const correctBtn = document.getElementById("flashcard-correct-btn");
+    const incorrectBtn = document.getElementById("flashcard-incorrect-btn");
+    
+    if (isLearned) {
+      correctBtn.className = "btn btn-success btn-sm shadow-sm";
+      incorrectBtn.className = "btn btn-outline-secondary btn-sm";
+    } else {
+      correctBtn.className = "btn btn-outline-success btn-sm";
+      incorrectBtn.className = "btn btn-outline-secondary btn-sm";
+    }
+  }
+
+  // Dynamic Modal Re-use Helpers
+  function openAddWordModal() {
+    document.getElementById("modal-title").textContent = "Add Word to Bank";
+    document.getElementById("word-entry-form").action = "{{ url_for('vocabulary.add_word') }}";
+    document.getElementById("word").value = "";
+    document.getElementById("definition").value = "";
+    document.getElementById("context").value = "";
+    document.getElementById("chapter_or_page").value = "";
+    
+    // Automatically match the dropdown selection if a book filter is currently active
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookIdParam = urlParams.get('book_id');
+    if (bookIdParam && bookIdParam > 0) {
+      document.getElementById("book_id").value = bookIdParam;
+    } else {
+      document.getElementById("book_id").value = "-1";
+    }
+    
+    document.getElementById("modal-submit-btn").value = "Save Word";
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("wordModal")).show();
+  }
+
+  function openEditWordModal(id, word, definition, context, chapter_or_page, book_id) {
+    document.getElementById("modal-title").textContent = "Edit Word";
+    document.getElementById("word-entry-form").action = "/vocabulary/edit/" + id;
+    document.getElementById("word").value = word;
+    document.getElementById("definition").value = definition;
+    document.getElementById("context").value = context;
+    document.getElementById("chapter_or_page").value = chapter_or_page;
+    document.getElementById("book_id").value = book_id || "-1";
+    document.getElementById("modal-submit-btn").value = "Update Word";
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("wordModal")).show();
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialise tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Edit button click listeners
+    document.querySelectorAll(".btn-edit-word").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const id = this.dataset.id;
+        const word = this.dataset.word;
+        const definition = this.dataset.definition;
+        const context = this.dataset.context;
+        const location = this.dataset.location;
+        const bookId = this.dataset.book;
+        openEditWordModal(id, word, definition, context, location, bookId);
+      });
+    });
+  });
+</script>
+{% endblock %}

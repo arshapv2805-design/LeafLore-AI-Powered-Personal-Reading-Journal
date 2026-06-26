@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Reading Insights · LeafLore{% endblock %}
+{% block content %}
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 text-primary" style="font-family: 'Fraunces', serif;">Reading Insights &amp; Analytics</h2>
+        <p class="text-secondary mb-0">Understand your reading velocity, predictions, and recommendations.</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+
+    <!-- ML Pace Card -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-speedometer2 text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Reading Pace &amp; Performance</h5>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="p-3 border rounded h-100" style="background: rgba(32, 111, 25, 0.01); border-color: var(--border-color) !important;">
+            <p class="text-secondary small mb-1">Average Daily Velocity</p>
+            <h3 class="fw-bold text-success mb-1">{{ "%.1f"|format(pace.avg_pages_per_day) }}</h3>
+            <p class="text-muted small mb-0">pages per active reading day</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="p-3 border rounded h-100" style="background: rgba(32, 111, 25, 0.01); border-color: var(--border-color) !important;">
+            <p class="text-secondary small mb-1">Weekly Volume</p>
+            <h3 class="fw-bold text-success mb-1">{{ pace.weekly_volume }}</h3>
+            <p class="text-muted small mb-0">pages read in the last 7 days</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ML Finish Predictions -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-cpu-fill text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">ML Completion Forecasts</h5>
+      </div>
+      <p class="text-secondary small mb-3">
+        Our Machine Learning model estimates when you will finish your currently reading books based on your historical pace, notes, and focused sessions.
+      </p>
+      
+      <div class="d-flex flex-column gap-3">
+        {% if predictions %}
+          {% for p in predictions %}
+            <div class="p-3 border rounded" style="background: rgba(32, 111, 25, 0.01); border-color: var(--border-color) !important;">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                  <h6 class="mb-0 fw-bold text-primary">{{ p.title }}</h6>
+                  <p class="text-muted small mb-0">by {{ p.author }}</p>
+                </div>
+                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-semibold">
+                  {{ p.confidence_pct }}% Confidence
+                </span>
+              </div>
+              <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top text-secondary small">
+                <i class="bi bi-calendar-event text-success"></i>
+                <span>Forecasted Finish Date: <strong>{{ p.predicted_finish_date }}</strong></span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-4 border border-dashed rounded" style="border-style: dashed !important; border-color: var(--border-color) !important;">
+            <i class="bi bi-journal-x text-muted fs-2 mb-2"></i>
+            <p class="text-secondary small mb-0">No active books currently reading. Add books and log pages to see predictions!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Weekly Reading Volume Table -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-calendar-check text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Weekly Reading Trend</h5>
+      </div>
+      
+      {% if weekly_trend_data %}
+        <div class="table-responsive">
+          <table class="table table-sm table-borderless align-middle mb-0" style="color: var(--text-color);">
+            <thead>
+              <tr class="border-bottom" style="border-color: var(--border-color) !important;">
+                <th class="text-secondary fw-semibold py-2">Date</th>
+                <th class="text-secondary fw-semibold py-2 text-end">Pages Logged</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for day_str, count in weekly_trend_data.items() %}
+                <tr class="border-bottom" style="border-color: var(--border-color) !important; font-size: 0.88rem;">
+                  <td class="py-2 fw-medium">{{ day_str }}</td>
+                  <td class="py-2 text-end text-success fw-bold">{{ count }} pages</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-secondary small text-center mb-0 py-3">No activity logged this week.</p>
+      {% endif %}
+    </div>
+
+    <!-- Recommendations Card -->
+    <div class="card card-body shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-lightbulb text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Recommended Next Reads</h5>
+      </div>
+      <p class="text-secondary small mb-3">Based on your shelf history, these are selected next reads to maintain your momentum:</p>
+      
+      <div class="row g-3">
+        {% if recommendations %}
+          {% for rec in recommendations %}
+            <div class="col-md-6">
+              <div class="p-3 border rounded h-100 d-flex gap-3 align-items-start" style="background: rgba(32, 111, 25, 0.01); border-color: var(--border-color) !important;">
+                {% if rec.cover_url %}
+                  <img src="{{ rec.cover_url }}" alt="{{ rec.title }}" class="rounded shadow-sm" style="width: 50px; height: 75px; object-fit: cover;">
+                {% else %}
+                  <div class="bg-success text-white d-flex align-items-center justify-content-center rounded shadow-sm" style="width: 50px; height: 75px; font-size: 0.6rem;">
+                    No Cover
+                  </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                  <h6 class="mb-1 text-primary fw-bold" style="font-size: 0.9rem;">{{ rec.title }}</h6>
+                  <p class="text-secondary small mb-1">by {{ rec.author }}</p>
+                  <span class="badge bg-success-subtle text-success-emphasis" style="font-size: 0.68rem;">{{ rec.genre }}</span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="col-12">
+            <p class="text-secondary small text-center mb-0 py-3">Add books to your library to unlock recommendations.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

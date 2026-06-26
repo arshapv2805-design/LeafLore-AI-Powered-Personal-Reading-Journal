@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LeafLore{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}?v=1.0.5">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.0.4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/garden.css') }}?v=1.0.4">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#206f19">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LeafLore">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <script src="{{ url_for('static', filename='js/theme.js') }}?v=1.0.4"></script>
+  
+  <style>
+    /* Trophy Toast Notification Styles */
+    .trophy-toast-container {
+      position: fixed;
+      top: 25px;
+      right: 25px;
+      z-index: 1099;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .trophy-toast {
+      background: rgba(18, 18, 18, 0.95);
+      backdrop-filter: blur(12px);
+      border: 2px solid #b8860b;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      width: 330px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(184, 134, 11, 0.2);
+      transform: translateX(380px);
+      transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+    }
+    .trophy-toast.show {
+      transform: translateX(0);
+    }
+    .trophy-icon-container {
+      background: radial-gradient(circle, #b8860b 0%, #8b6508 100%);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(184, 134, 11, 0.5);
+      animation: spinTrophy 1.5s ease-out;
+    }
+    @keyframes spinTrophy {
+      0% { transform: rotateY(0deg) scale(0.5); }
+      50% { transform: rotateY(360deg) scale(1.2); }
+      100% { transform: rotateY(720deg) scale(1); }
+    }
+    .trophy-info {
+      flex-grow: 1;
+      min-width: 0;
+    }
+    .trophy-toast-header {
+      color: #b8860b;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2px;
+    }
+    .trophy-toast-title {
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .trophy-toast-desc {
+      color: #b3b3b3;
+      font-size: 0.78rem;
+      line-height: 1.25;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('dashboard.index') if current_user.is_authenticated else url_for('auth.login') }}">
+        <i class="bi bi-leaf"></i> LeafLore
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        {% if current_user.is_authenticated %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('books.my_books') }}">My Books</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.insights') }}">Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('vocabulary.index') }}">Word Bank</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.settings') }}">Settings</a></li>
+          {% if current_user.is_admin %}
+          <li class="nav-item"><a class="nav-link text-danger fw-semibold" href="{{ url_for('admin.index') }}"><i class="bi bi-shield-lock-fill"></i> Admin</a></li>
+          {% endif %}
+        </ul>
+        {% endif %}
+        
+        <ul class="navbar-nav ms-auto align-items-center d-flex flex-row gap-2">
+          {% if current_user.is_authenticated %}
+          <li class="nav-item">
+            <button id="calm-toggle" class="btn px-2" title="Toggle Calm Mode" aria-label="Toggle Calm Mode">
+              <i class="bi bi-wind"></i>
+            </button>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <button id="theme-toggle" class="btn px-2" title="Toggle Theme" aria-label="Toggle Theme">
+              <i class="bi bi-moon-stars-fill"></i>
+            </button>
+          </li>
+
+          {% if current_user.is_authenticated %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle"></i> {{ current_user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% if current_user.is_admin %}
+              <li><a class="dropdown-item text-danger fw-semibold" href="{{ url_for('admin.index') }}"><i class="bi bi-shield-lock-fill"></i> Admin Console</a></li>
+              <li><hr class="dropdown-divider"></li>
+              {% endif %}
+              <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Log out</a></li>
+            </ul>
+          </li>
+          {% else %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a></li>
+          <li class="nav-item"><a class="btn btn-success btn-sm ms-2" href="{{ url_for('auth.register') }}">Sign up</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="trophy-toast-container" id="trophy-toast-container"></div>
+
+  <main class="container my-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-container">
+        {% for category, message in messages %}
+          {% if category == 'achievement' %}
+            {% set parts = message.split('|') %}
+            <script>
+              document.addEventListener("DOMContentLoaded", function() {
+                showTrophyToast("{{ parts[0] }}", "{{ parts[1] }}", "{{ parts[2] }}");
+              });
+            </script>
+          {% else %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="{{ url_for('static', filename='js/particles.js') }}?v=1.0.4"></script>
+  <script>
+    setTimeout(function () {
+      document.querySelectorAll('#flash-container .alert').forEach(function (el) {
+        bootstrap.Alert.getOrCreateInstance(el).close();
+      });
+    }, 4000);
+
+    function showTrophyToast(title, desc, iconClass) {
+      const container = document.getElementById("trophy-toast-container");
+      if (!container) return;
+
+      const toast = document.createElement("div");
+      toast.className = "trophy-toast";
+      toast.innerHTML = `
+        <div class="trophy-icon-container">
+          <i class="bi ${iconClass || 'bi-trophy'}"></i>
+        </div>
+        <div class="trophy-info">
+          <div class="trophy-toast-header">Trophy Unlocked</div>
+          <div class="trophy-toast-title">${title}</div>
+          <div class="trophy-toast-desc">${desc}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+
+      // Trigger repaint
+      toast.offsetHeight;
+
+      // Slide in
+      toast.classList.add("show");
+
+      // Confetti burst
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { x: 0.85, y: 0.25 },
+          colors: ['#206f19', '#b8860b', '#ffffff']
+        });
+      }
+
+      // Slide out and remove
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => {
+          toast.remove();
+        }, 600);
+      }, 5000);
+    }
+  </script>
+  <!-- Mobile-first Sticky Bottom Navigation Bar -->
+  {% if current_user.is_authenticated %}
+  <div class="mobile-bottom-nav d-flex d-lg-none justify-content-around align-items-center">
+    <a href="{{ url_for('dashboard.index') }}" class="mobile-nav-link d-flex flex-column align-items-center {% if request.path == url_for('dashboard.index') %}active{% endif %}">
+      <i class="bi bi-house-door"></i>
+      <span>Home</span>
+    </a>
+    <a href="{{ url_for('books.my_books') }}" class="mobile-nav-link d-flex flex-column align-items-center {% if request.path == url_for('books.my_books') %}active{% endif %}">
+      <i class="bi bi-bookshelf"></i>
+      <span>Library</span>
+    </a>
+    <a href="{{ url_for('dashboard.insights') }}" class="mobile-nav-link d-flex flex-column align-items-center {% if request.path == url_for('dashboard.insights') %}active{% endif %}">
+      <i class="bi bi-graph-up-arrow"></i>
+      <span>Insights</span>
+    </a>
+    <a href="{{ url_for('dashboard.settings') }}" class="mobile-nav-link d-flex flex-column align-items-center {% if request.path == url_for('dashboard.settings') %}active{% endif %}">
+      <i class="bi bi-gear"></i>
+      <span>Settings</span>
+    </a>
+  </div>
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/offline_sync.js') }}?v=1.0.4"></script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+{% extends 'base.html' %}
+{% block title %}My bookshelf · LeafLore{% endblock %}
+{% block content %}
+
+<style>
+  /* 3D Bookshelf & Spine Styles */
+  .bookshelf-container {
+    background: radial-gradient(circle at center, #2b1b10 0%, #150d08 100%);
+    border-radius: 1.25rem;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9), 0 10px 30px rgba(0, 0, 0, 0.3);
+    perspective: 1000px;
+  }
+  .shelf-level {
+    position: relative;
+    border-bottom: 14px solid #422a18;
+    border-left: 8px solid #2e1d10;
+    border-right: 8px solid #2e1d10;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5), inset 0 -4px 0 #2a1b0c;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0 1.5rem;
+    height: 220px;
+    margin-bottom: 3.5rem;
+  }
+  .shelf-level::after {
+    content: '';
+    position: absolute;
+    bottom: -22px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    filter: blur(4px);
+    pointer-events: none;
+  }
+  .book-spine-3d {
+    height: 180px;
+    margin-right: 3px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), margin-right 0.3s ease;
+    cursor: pointer;
+    z-index: 10;
+    transform-origin: bottom center;
+  }
+  .book-spine-3d:hover {
+    transform: translateZ(25px) rotateY(-12deg);
+    margin-right: 8px;
+    z-index: 50;
+  }
+  .book-spine-3d .spine-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--spine-color, #5e6870);
+    border-radius: 3px 3px 0 0;
+    box-shadow: inset -2px 0 5px rgba(0,0,0,0.35), inset 2px 0 5px rgba(255,255,255,0.12), 2px 0 5px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0.2rem;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevent text overflow bleeding outside */
+  }
+  .book-spine-3d.thin-spine .spine-author {
+    display: none; /* Hide author on thin books to prevent overlap */
+  }
+  .book-spine-3d.thin-spine .spine-face {
+    justify-content: center; /* Center the title on thin books */
+  }
+  .book-spine-3d .spine-title {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    max-height: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  .book-spine-3d .spine-author {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.52rem;
+    max-height: 40px;
+    overflow: hidden;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+  }
+  .book-spine-3d.has-gold-foil::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 2px;
+    right: 2px;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+</style>
+
+{% macro book_card(book) %}
+<div class="col book-card-item" style="animation: fadeInUp 0.4s ease both;"
+     data-title="{{ book.title|lower }}"
+     data-author="{{ book.author|lower or '' }}"
+     data-book-id="{{ book.id }}"
+     data-progress="{{ book.progress_pct if book.status == 'reading' else (100 if book.status == 'completed' else 0) }}"
+     data-date-added="{{ book.date_added.timestamp() if book.date_added else 0 }}">
+  <div class="card h-100 book-card p-3">
+    <div class="d-flex gap-3">
+      {% if book.cover_url %}
+        <div class="book-cover-container shadow-sm rounded" style="width: 70px; height: 104px; margin-bottom: 0;">
+          <img src="{{ book.cover_url }}" alt="" class="book-cover-img w-100 h-100 object-fit-cover rounded">
+        </div>
+      {% else %}
+        <div class="cover-placeholder rounded" style="width: 70px; height: 104px; font-size: 1.5rem;"><i class="bi bi-book"></i></div>
+      {% endif %}
+      <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
+        <div style="min-width: 0; overflow: hidden;">
+          <a href="{{ url_for('books.book_detail', book_id=book.id) }}" class="text-decoration-none d-block stretched-link">
+            <h6 class="mb-1 text-truncate text-primary fw-bold">{{ book.title }}</h6>
+          </a>
+          <p class="text-secondary small mb-2 text-truncate">{{ book.author or 'Unknown author' }}</p>
+          {% if book.genre %}
+            <span class="badge genre-badge genre-{{ book.genre|lower|replace(' ', '-') }}">{{ book.genre }}</span>
+          {% endif %}
+          <div class="sync-status-container d-inline-block ms-1" data-sync-book-id="{{ book.id }}"></div>
+        </div>
+        
+        {% if book.status == 'reading' and book.total_pages %}
+          <div class="w-100 mt-2">
+            <div class="progress" style="height:6px; background-color: var(--border-color);">
+              <div class="progress-bar bg-success" style="width:{{ book.progress_pct }}%"></div>
+            </div>
+            <p class="small text-secondary mb-0 mt-1" style="font-size: 0.75rem;">{{ book.progress_pct }}% ({{ book.pages_read }} / {{ book.total_pages }} p)</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Title Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h3 class="mb-1 text-primary fw-bold">My Bookshelf</h3>
+    <p class="text-secondary small mb-0">Organize and manage your personal reading library.</p>
+  </div>
+  <a href="{{ url_for('books.add_book') }}" class="btn btn-success d-flex align-items-center gap-2 shadow-sm">
+    <i class="bi bi-plus-lg"></i> Add Book
+  </a>
+</div>
+
+<!-- Library Controls: Search and Sort -->
+<div class="row g-2 mb-4">
+  <div class="col-md-8">
+    <div class="input-group">
+      <span class="input-group-text bg-transparent border-end-0" style="border-color: var(--border-color); color: var(--text-secondary);"><i class="bi bi-search"></i></span>
+      <input type="text" id="librarySearchInput" class="form-control border-start-0" placeholder="Search by title or author..." onkeyup="filterBooksList()" style="border-color: var(--border-color); background: transparent; color: var(--text-color);">
+    </div>
+  </div>
+  <div class="col-md-4">
+    <select id="librarySortSelect" class="form-select" onchange="sortBooksList()" style="border-color: var(--border-color); background-color: transparent; color: var(--text-color); font-size: 0.9rem; padding: 0.5rem 0.75rem;">
+      <option value="recent">Sort by: Recent Activity</option>
+      <option value="progress">Sort by: Progress %</option>
+      <option value="alphabetical">Sort by: Alphabetical (A-Z)</option>
+    </select>
+  </div>
+</div>
+
+<!-- Modern Pills navigation -->
+<div class="card p-2 border-0 mb-4 shadow-sm" style="background-color: var(--bg-body) !important; border-radius: 0.8rem;">
+  <ul class="nav nav-pills d-flex flex-nowrap overflow-auto gap-2">
+    <li class="nav-item flex-fill">
+      <button class="nav-link w-100 active py-2 border-0 fw-semibold text-center" data-bs-toggle="tab" data-bs-target="#reading" type="button" style="border-radius: 0.6rem;">
+        <i class="bi bi-bookmark-play"></i> Reading 
+        <span class="badge bg-success-subtle text-success-emphasis ms-1">{{ reading_books|length }}</span>
+      </button>
+    </li>
+    <li class="nav-item flex-fill">
+      <button class="nav-link w-100 py-2 border-0 fw-semibold text-center" data-bs-toggle="tab" data-bs-target="#completed" type="button" style="border-radius: 0.6rem;">
+        <i class="bi bi-bookmark-check"></i> Completed 
+        <span class="badge bg-success-subtle text-success-emphasis ms-1">{{ completed_books|length }}</span>
+      </button>
+    </li>
+    <li class="nav-item flex-fill">
+      <button class="nav-link w-100 py-2 border-0 fw-semibold text-center" data-bs-toggle="tab" data-bs-target="#want" type="button" style="border-radius: 0.6rem;">
+        <i class="bi bi-bookmark-plus"></i> Want to read 
+        <span class="badge bg-success-subtle text-success-emphasis ms-1">{{ want_books|length }}</span>
+      </button>
+    </li>
+  </ul>
+</div>
+
+<!-- Tab Content panels -->
+<div class="tab-content">
+  {% for shelf_id, shelf_books, empty_msg in [
+    ('reading', reading_books, 'No books in progress yet.'),
+    ('completed', completed_books, "Nothing finished yet — your first finish will show up here."),
+    ('want', want_books, 'Your want-to-read pile is empty.')
+  ] %}
+  <div class="tab-pane fade {{ 'show active' if loop.first }}" id="{{ shelf_id }}">
+    {% if shelf_books %}
+      {% if shelf_id == 'completed' %}
+        <!-- View Mode Switcher for Completed Books -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 animate-fade-in" style="animation: fadeInUp 0.4s ease both;">
+          <p class="text-secondary small mb-0"><i class="bi bi-info-circle me-1"></i> Toggle between layouts to showcase completed books.</p>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Bookshelf View Switcher">
+            <button type="button" class="btn btn-outline-success active" id="btn-view-grid" onclick="setCompletedView('grid')">
+              <i class="bi bi-grid-3x3-gap-fill me-1"></i> Grid View
+            </button>
+            <button type="button" class="btn btn-outline-success" id="btn-view-3d" onclick="setCompletedView('3d')">
+              <i class="bi bi-bookshelf me-1"></i> 3D Shelf View
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid View -->
+        <div id="completed-grid-view">
+          <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            {% for book in shelf_books %}{{ book_card(book) }}{% endfor %}
+          </div>
+        </div>
+
+        <!-- 3D Shelf View (Hidden by default) -->
+        <div id="completed-3d-view" class="d-none animate-fade-in">
+          <div class="bookshelf-container py-5 px-4 mb-4">
+            {% set books_per_shelf = 10 %}
+            {% set total_completed = shelf_books|length %}
+            {% set num_shelves = (total_completed / books_per_shelf)|round(0, 'ceil')|int %}
+            {% if num_shelves == 0 %}{% set num_shelves = 1 %}{% endif %}
+            
+            {% for shelf_idx in range(num_shelves) %}
+              <div class="shelf-level mb-5">
+                {% set start_idx = shelf_idx * books_per_shelf %}
+                {% set end_idx = start_idx + books_per_shelf %}
+                {% for book in shelf_books[start_idx:end_idx] %}
+                  {% set page_count = book.total_pages or 300 %}
+                  {% set thickness = 24 + (page_count // 35) %}
+                  {% if thickness > 60 %}{% set thickness = 60 %}{% endif %}
+                  
+                  {# Generate a consistent color based on book genre/title #}
+                  {% set color_map = {
+                    'fiction': '#4a7c59', 'sci-fi': '#2a5a75', 'science': '#2a5a75',
+                    'fantasy': '#5d4275', 'biography': '#8c3b3b', 'history': '#6e5d4a',
+                    'self-help': '#a1832f', 'non-fiction': '#3b6e8c', 'poetry': '#a15582'
+                  } %}
+                  {% set genre_lower = (book.genre or '')|lower %}
+                  {% set spine_color = color_map.get(genre_lower, '#5e6870') %}
+                  {% if genre_lower not in color_map %}
+                    {# Fallback colors depending on title characters #}
+                    {% set colors = ['#4e5d6c', '#6f5643', '#395e54', '#704f50', '#564d63'] %}
+                    {% set char_sum = book.title|length %}
+                    {% set spine_color = colors[char_sum % 5] %}
+                  {% endif %}
+                  
+                  <div class="book-spine-3d {% if book.total_pages and book.total_pages > 400 %}has-gold-foil{% endif %} {% if thickness < 32 %}thin-spine{% endif %}" 
+                       style="--spine-color: {{ spine_color }}; width: {{ thickness }}px;"
+                       data-book-id="{{ book.id }}"
+                       data-title="{{ book.title }}"
+                       data-author="{{ book.author or 'Unknown author' }}"
+                       data-genre="{{ book.genre or 'N/A' }}"
+                       data-cover="{{ book.cover_url or '' }}"
+                       data-completed="{{ book.date_completed.strftime('%b %d, %Y') if book.date_completed else 'N/A' }}"
+                       data-pages="{{ book.total_pages or '0' }}"
+                       data-description="{{ book.description or '' }}"
+                       data-detail-url="{{ url_for('books.book_detail', book_id=book.id) }}"
+                       onclick="openShelfBookModal(this)">
+                    <div class="spine-face">
+                      <div class="spine-title font-fraunces">{{ book.title }}</div>
+                      <div class="spine-author">
+                        {% if book.author %}
+                          {{ (book.author.split(',')|first).split(' ')|last }}
+                        {% else %}
+                          Unknown
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% else %}
+        <!-- Default Grid View for other tabs -->
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+          {% for book in shelf_books %}{{ book_card(book) }}{% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty-state-card py-5">
+        <div class="empty-state-icon-circle mb-3">
+          <i class="bi bi-journal-bookmark"></i>
+        </div>
+        <h5 class="fw-bold mb-1 text-primary">Your shelf is quiet</h5>
+        <p class="text-secondary small mb-3">{{ empty_msg }}</p>
+        <a href="{{ url_for('books.add_book') }}" class="btn btn-success btn-sm px-4 gap-2 d-inline-flex align-items-center shadow-sm">
+          <i class="bi bi-plus-lg"></i> Add your first book
+        </a>
+      </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+<!-- 3D Shelf Book Details Modal -->
+<div class="modal fade" id="shelfBookModal" tabindex="-1" aria-labelledby="shelfBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow" style="background: var(--bg-card); backdrop-filter: var(--card-blur); border: var(--card-border) !important;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary" id="shelfBookModalLabel">Completed Book Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-4">
+        <div class="d-flex gap-4 align-items-start">
+          <div id="shelf-modal-cover-container" class="flex-shrink-0">
+            <!-- Cover or placeholder -->
+          </div>
+          <div class="flex-grow-1" style="min-width: 0;">
+            <h4 id="shelf-modal-title" class="fw-bold text-primary mb-1" style="font-family: 'Fraunces', Georgia, serif;"></h4>
+            <p id="shelf-modal-author" class="text-secondary mb-2 fs-5"></p>
+            <div class="mb-3">
+              <span id="shelf-modal-genre" class="badge bg-success-subtle text-success-emphasis"></span>
+              <span id="shelf-modal-pages" class="badge bg-secondary-subtle text-secondary-emphasis"></span>
+              <div id="shelf-modal-sync" class="sync-status-container d-inline-block ms-1" data-sync-book-id=""></div>
+            </div>
+            <p class="small text-secondary mb-1"><strong>Completed on:</strong> <span id="shelf-modal-completed"></span></p>
+            <p id="shelf-modal-desc" class="text-muted small mb-0" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <a id="shelf-modal-detail-btn" href="#" class="btn btn-success btn-sm">View Full Details</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  function setCompletedView(mode) {
+    const gridView = document.getElementById("completed-grid-view");
+    const view3d = document.getElementById("completed-3d-view");
+    const btnGrid = document.getElementById("btn-view-grid");
+    const btn3d = document.getElementById("btn-view-3d");
+    
+    if (!gridView || !view3d) return;
+
+    if (mode === "3d") {
+      gridView.classList.add("d-none");
+      view3d.classList.remove("d-none");
+      btnGrid.classList.remove("active");
+      btn3d.classList.add("active");
+      localStorage.setItem("leaflore-bookshelf-view", "3d");
+    } else {
+      gridView.classList.remove("d-none");
+      view3d.classList.add("d-none");
+      btnGrid.classList.add("active");
+      btn3d.classList.remove("active");
+      localStorage.setItem("leaflore-bookshelf-view", "grid");
+    }
+  }
+
+  function openShelfBookModal(el) {
+    const bookId = el.dataset.bookId;
+    const title = el.dataset.title;
+    const author = el.dataset.author;
+    const genre = el.dataset.genre;
+    const cover = el.dataset.cover;
+    const completed = el.dataset.completed;
+    const pages = el.dataset.pages;
+    const desc = el.dataset.description;
+    const url = el.dataset.detailUrl;
+    
+    document.getElementById("shelf-modal-title").textContent = title;
+    document.getElementById("shelf-modal-author").textContent = author;
+    document.getElementById("shelf-modal-genre").textContent = genre;
+    document.getElementById("shelf-modal-pages").textContent = pages + " pages";
+    document.getElementById("shelf-modal-completed").textContent = completed;
+    document.getElementById("shelf-modal-desc").textContent = desc || "No description provided.";
+    document.getElementById("shelf-modal-detail-btn").href = url;
+    
+    const modalSync = document.getElementById("shelf-modal-sync");
+    if (modalSync) {
+      modalSync.setAttribute("data-sync-book-id", bookId || "");
+    }
+    
+    const coverContainer = document.getElementById("shelf-modal-cover-container");
+    if (cover) {
+      coverContainer.innerHTML = `<div class="book-cover-container rounded shadow-sm" style="width: 80px; height: 118px; margin-bottom: 0;">
+        <img src="${cover}" class="book-cover-img w-100 h-100 object-fit-cover rounded" alt="">
+      </div>`;
+    } else {
+      coverContainer.innerHTML = `<div class="cover-placeholder rounded shadow-sm" style="width: 80px; height: 118px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; background-color: var(--border-color); color: var(--text-muted);"><i class="bi bi-book"></i></div>`;
+    }
+    
+    // Refresh sync badges so the modal sync status is instantly updated
+    updateSyncBadges();
+    
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("shelfBookModal"));
+    modal.show();
+  }
+
+  // IndexedDB Sync Status Badges
+  function updateSyncBadges() {
+    const DB_NAME = 'leaflore-offline-db';
+    const STORE_NAME = 'offline-queue';
+    
+    const containers = document.querySelectorAll('.sync-status-container');
+    if (!containers.length) return;
+    
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onsuccess = function(e) {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        containers.forEach(container => {
+          if (navigator.onLine) {
+            container.innerHTML = `<span class="badge bg-light text-secondary d-inline-flex align-items-center gap-1" style="font-size: 0.65rem;"><i class="bi bi-cloud-check"></i> Synced</span>`;
+          } else {
+            container.innerHTML = ``;
+          }
+        });
+        return;
+      }
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = function() {
+        const items = req.result || [];
+        const queuedBookIds = new Set(items.map(item => item.book_id));
+        
+        containers.forEach(container => {
+          const bookId = parseInt(container.getAttribute('data-sync-book-id'));
+          if (!bookId) return;
+          if (queuedBookIds.has(bookId)) {
+            container.innerHTML = `<span class="badge bg-warning text-dark-emphasis d-inline-flex align-items-center gap-1" style="font-size: 0.65rem;"><i class="bi bi-cloud-slash"></i> Offline</span>`;
+          } else {
+            if (navigator.onLine) {
+              container.innerHTML = `<span class="badge bg-light text-secondary d-inline-flex align-items-center gap-1" style="font-size: 0.65rem;"><i class="bi bi-cloud-check"></i> Synced</span>`;
+            } else {
+              container.innerHTML = ``;
+            }
+          }
+        });
+      };
+    };
+    request.onerror = function() {
+      containers.forEach(container => {
+        if (navigator.onLine) {
+          container.innerHTML = `<span class="badge bg-light text-secondary d-inline-flex align-items-center gap-1" style="font-size: 0.65rem;"><i class="bi bi-cloud-check"></i> Synced</span>`;
+        }
+      });
+    };
+  }
+
+  // Search & Filter Logic
+  window.filterBooksList = function() {
+    const query = document.getElementById("librarySearchInput").value.toLowerCase();
+    const activeTabPane = document.querySelector(".tab-pane.active");
+    if (!activeTabPane) return;
+    
+    const items = activeTabPane.querySelectorAll(".book-card-item");
+    items.forEach(item => {
+      const title = item.getAttribute("data-title") || "";
+      const author = item.getAttribute("data-author") || "";
+      if (title.includes(query) || author.includes(query)) {
+        item.classList.remove("d-none");
+      } else {
+        item.classList.add("d-none");
+      }
+    });
+  }
+
+  // Sorting Logic
+  window.sortBooksList = function() {
+    const sortBy = document.getElementById("librarySortSelect").value;
+    const activeTabPane = document.querySelector(".tab-pane.active");
+    if (!activeTabPane) return;
+    
+    const grid = activeTabPane.querySelector(".row");
+    if (!grid) return;
+    
+    const items = Array.from(grid.querySelectorAll(".book-card-item"));
+    
+    items.sort((a, b) => {
+      if (sortBy === "alphabetical") {
+        const titleA = a.getAttribute("data-title") || "";
+        const titleB = b.getAttribute("data-title") || "";
+        return titleA.localeCompare(titleB);
+      } else if (sortBy === "progress") {
+        const progA = parseInt(a.getAttribute("data-progress")) || 0;
+        const progB = parseInt(b.getAttribute("data-progress")) || 0;
+        return progB - progA;
+      } else {
+        const dateA = parseFloat(a.getAttribute("data-date-added")) || 0;
+        const dateB = parseFloat(b.getAttribute("data-date-added")) || 0;
+        return dateB - dateA;
+      }
+    });
+    
+    grid.innerHTML = "";
+    items.forEach(item => grid.appendChild(item));
+  }
+
+  // Restore preferred view on load
+  document.addEventListener("DOMContentLoaded", function() {
+    const pref = localStorage.getItem("leaflore-bookshelf-view");
+    if (pref === "3d" && document.getElementById("btn-view-3d")) {
+      setCompletedView("3d");
+    }
+
+    const tabElList = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabElList.forEach(tabEl => {
+      tabEl.addEventListener('shown.bs.tab', () => {
+        filterBooksList();
+        sortBooksList();
+      });
+    });
+
+    updateSyncBadges();
+    window.addEventListener('online', updateSyncBadges);
+    window.addEventListener('offline', updateSyncBadges);
+  });
+</script>
+{% endblock %}

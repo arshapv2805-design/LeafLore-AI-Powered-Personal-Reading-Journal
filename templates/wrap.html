@@ -1,0 +1,698 @@
+{% extends 'base.html' %}
+{% block title %}{{ current_year }} Reading Wrap · LeafLore{% endblock %}
+{% block content %}
+
+<!-- Custom Styling for the Spotify-style Wrapped Slideshow -->
+<style>
+  .wrap-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1b241c 0%, #0a0d0a 100%);
+    z-index: 1050;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2.5rem 1.5rem;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Ambient glowing backdrop spots */
+  .wrap-glow-1 {
+    position: absolute;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(32, 111, 25, 0.28) 0%, transparent 70%);
+    filter: blur(40px);
+    top: 10%;
+    left: -100px;
+    pointer-events: none;
+    animation: pulseGlow 8s infinite alternate ease-in-out;
+  }
+  .wrap-glow-2 {
+    position: absolute;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(184, 134, 11, 0.24) 0%, transparent 70%);
+    filter: blur(45px);
+    bottom: 10%;
+    right: -100px;
+    pointer-events: none;
+    animation: pulseGlow 10s infinite alternate-reverse ease-in-out;
+  }
+
+  @keyframes pulseGlow {
+    0% { transform: scale(1) translate(0, 0); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(30px, -20px); opacity: 1; }
+  }
+
+  /* Stories-style Top Progress Bar Indicator */
+  .wrap-progress-bar {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto 1.5rem auto;
+    z-index: 1100;
+  }
+  .wrap-progress-segment {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .wrap-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #ffffff;
+    transition: width 0.1s linear;
+  }
+  .wrap-progress-segment.completed .wrap-progress-fill {
+    width: 100%;
+    background: var(--primary-color, #206f19);
+  }
+
+  /* Slide Containers */
+  .wrap-slides-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1080;
+  }
+  .wrap-slide {
+    position: absolute;
+    width: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease, visibility 0.5s ease;
+    text-align: center;
+  }
+  .wrap-slide.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  /* Slide Typography & Content */
+  .wrap-title {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff 50%, #b8860b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .wrap-subtitle {
+    font-size: 1.1rem;
+    color: #a5ae8e;
+    font-weight: 400;
+    margin-bottom: 2rem;
+  }
+  .wrap-stat {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 5.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 20px rgba(32, 111, 25, 0.4);
+    animation: counterPulse 2s infinite alternate ease-in-out;
+  }
+  
+  @keyframes counterPulse {
+    0% { transform: scale(1); text-shadow: 0 4px 15px rgba(32, 111, 25, 0.4); }
+    100% { transform: scale(1.02); text-shadow: 0 4px 25px rgba(184, 134, 11, 0.6); }
+  }
+
+  .wrap-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.25rem;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  /* Stories Tap Left/Right Controls */
+  .wrap-tap-zone {
+    position: absolute;
+    top: 80px;
+    bottom: 80px;
+    width: 25%;
+    z-index: 1090;
+    cursor: pointer;
+  }
+  .wrap-tap-left { left: 0; }
+  .wrap-tap-right { right: 0; }
+
+  /* Navigation Footer Controls */
+  .wrap-controls-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 600px;
+    width: 100%;
+    margin: 1.5rem auto 0 auto;
+    z-index: 1100;
+  }
+  .wrap-btn-nav {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .wrap-btn-nav:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.08);
+  }
+  .wrap-btn-exit {
+    background: #b8860b;
+    border: none;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3);
+  }
+  .wrap-btn-exit:hover {
+    background: #a3760a;
+    transform: scale(1.05);
+    color: #ffffff;
+  }
+
+  /* Summary Card Styling */
+  .summary-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .summary-stat-row:last-child {
+    border-bottom: none;
+  }
+  .summary-label {
+    color: #a5ae8e;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .summary-val {
+    font-family: "Fraunces", Georgia, serif;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+  
+  /* Begin Button Styling & Hover Animation */
+  .wrap-begin-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #a5ae8e;
+    font-weight: 500;
+    padding: 0.6rem 1.4rem;
+    border-radius: 2rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+  }
+  
+  .wrap-begin-btn:hover {
+    background: #206f19;
+    border-color: #206f19;
+    color: #ffffff !important;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(32, 111, 25, 0.45);
+  }
+
+  .wrap-begin-btn i {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+
+  .wrap-begin-btn:hover i {
+    transform: translateX(4px);
+  }
+</style>
+
+<!-- Reading Wrap Viewport Overriding Base Page Layout -->
+<div class="wrap-viewport">
+  <div class="wrap-glow-1"></div>
+  <div class="wrap-glow-2"></div>
+
+  <!-- Progress Bar Ticker -->
+  <div class="wrap-progress-bar" id="progress-bar">
+    <!-- Generated dynamically in JS -->
+  </div>
+
+  <!-- Hidden tap zones for story-like click navigation -->
+  <div class="wrap-tap-zone wrap-tap-left" onclick="prevSlide()"></div>
+  <div class="wrap-tap-zone wrap-tap-right" onclick="nextSlide()"></div>
+
+  <!-- Slides Container -->
+  <div class="wrap-slides-container">
+
+    {% if not has_data %}
+      <!-- Empty State Slide -->
+      <div class="wrap-slide active" style="visibility: visible; opacity: 1; transform: translateY(0);">
+        <div class="wrap-card text-center p-5">
+          <div class="display-1 mb-4" style="color: #b8860b;"><i class="bi bi-hourglass-bottom"></i></div>
+          <h2 class="wrap-title">A Journey Waiting to Grow</h2>
+          <p class="text-white-50 mb-4" style="font-size: 0.95rem;">We couldn't find any reading activity logged or books completed for the year {{ current_year }} yet.</p>
+          <a href="{{ url_for('dashboard.index') }}" class="wrap-btn-exit" style="background-color: var(--primary-color, #206f19); box-shadow: 0 4px 15px rgba(32, 111, 25, 0.3);">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <!-- Slide 1: Welcome Intro -->
+      <div class="wrap-slide active" data-duration="5000">
+        <div class="display-3 mb-3" style="animation: bounce 2s infinite;"><i class="bi bi-gift-fill text-warning"></i></div>
+        <h1 class="wrap-title">{{ current_year }}<br>Reading Wrap</h1>
+        <p class="wrap-subtitle">Let's unwrap your literary year and celebrate your achievements in LeafLore.</p>
+        <button type="button" class="wrap-begin-btn" onclick="nextSlide()">
+          <i class="bi bi-arrow-right"></i> Click or Tap to begin
+        </button>
+      </div>
+
+      <!-- Slide 2: Volumes & Milestones -->
+      <div class="wrap-slide" data-duration="6000">
+        <div class="wrap-stat" id="stat-books">0</div>
+        <h2 class="h4 fw-bold mb-2">Books Completed</h2>
+        <p class="wrap-subtitle">
+          {% if total_books_read > 0 %}
+            You accomplished a library of stories this year.
+          {% else %}
+            Every page logged is a seed planted for future stories.
+          {% endif %}
+        </p>
+        <div class="wrap-stat" id="stat-pages" style="font-size: 4rem; color: #b8860b; margin-top: 1.5rem;">0</div>
+        <h2 class="h5 fw-bold mb-0">Pages Logged</h2>
+      </div>
+
+      {% if most_active_month %}
+      <!-- Slide 3: Peak Month -->
+      <div class="wrap-slide" data-duration="6000">
+        <div class="display-3 mb-3 text-info"><i class="bi bi-calendar-heart"></i></div>
+        <h2 class="wrap-title" style="font-size: 2.2rem; background: linear-gradient(135deg, #ffffff 40%, #5b85b8 100%); -webkit-background-clip: text;">Your Peak Month</h2>
+        <p class="wrap-subtitle">The stars aligned. You were unstoppable in your reading journey during:</p>
+        <div class="wrap-card p-4">
+          <h3 class="display-6 fw-bold text-white mb-2" style="font-family: 'Fraunces', serif;">{{ most_active_month }}</h3>
+          <span class="fs-4 fw-semibold" style="color: #b8860b;">{{ most_active_month_pages }} pages read</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if favorite_genre %}
+      <!-- Slide 4: Favorite Genre -->
+      <div class="wrap-slide" data-duration="6000">
+        <div class="display-3 mb-3 text-success" style="color: var(--primary-color) !important;"><i class="bi bi-tags-fill"></i></div>
+        <h2 class="wrap-title" style="font-size: 2.2rem; background: linear-gradient(135deg, #ffffff 40%, var(--primary-color) 100%); -webkit-background-clip: text;">Genre Sanctuary</h2>
+        <p class="wrap-subtitle">You gravitated towards these ideas and themes. Your top genre was:</p>
+        <div class="wrap-card p-4">
+          <h3 class="display-6 fw-bold text-white mb-2" style="font-family: 'Fraunces', serif;">{{ favorite_genre }}</h3>
+          <span class="fs-5 text-white-50">{{ favorite_genre_count }} completed books</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if fastest_book %}
+      <!-- Slide 5: Fastest Read Book -->
+      <div class="wrap-slide" data-duration="6000">
+        <div class="display-3 mb-3 text-danger"><i class="bi bi-lightning-charge-fill"></i></div>
+        <h2 class="wrap-title" style="font-size: 2.2rem; background: linear-gradient(135deg, #ffffff 40%, #bc4c71 100%); -webkit-background-clip: text;">Speed Demon</h2>
+        <p class="wrap-subtitle">You couldn't put this book down! You flew through:</p>
+        <div class="wrap-card p-4 text-start">
+          <h4 class="fw-bold mb-1 text-white text-truncate" style="font-family: 'Fraunces', serif;">{{ fastest_book.title }}</h4>
+          <p class="text-white-50 small mb-3 text-truncate">by {{ fastest_book.author }}</p>
+          <div class="d-flex justify-content-between align-items-center border-top border-secondary pt-3">
+            <span class="small text-muted">Reading time:</span>
+            <span class="badge py-2 px-3" style="background: rgba(188, 76, 113, 0.15); color: #bc4c71; font-size: 0.95rem;">{{ fastest_days }} days</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Slide 6: Vocabulary Mastery -->
+      <div class="wrap-slide" data-duration="6000">
+        <div class="display-3 mb-3 text-warning"><i class="bi bi-journal-bookmark-fill"></i></div>
+        <h2 class="wrap-title" style="font-size: 2.2rem; background: linear-gradient(135deg, #ffffff 40%, #ffa500 100%); -webkit-background-clip: text;">Vocabulary Mastery</h2>
+        <p class="wrap-subtitle">You expanded your vocabulary and gathered key milestones in your Word Bank:</p>
+        <div class="wrap-card p-4">
+          <div class="wrap-stat" style="font-size: 4.8rem; color: #ffd700; text-shadow: 0 4px 20px rgba(255, 215, 0, 0.35);">{{ vocab_count }}</div>
+          <span class="fs-5 text-white fw-medium">Words Mastered & Cataloged</span>
+        </div>
+      </div>
+
+      <!-- Slide 7: Summary Wrapped Card -->
+      <div class="wrap-slide" data-duration="10000">
+        <div class="wrap-card text-start">
+          <div class="text-center border-bottom border-secondary pb-3 mb-3">
+            <h3 class="wrap-title mb-0" style="font-size: 1.8rem;">Your {{ current_year }} Summary</h3>
+            <p class="text-white-50 small mb-0">Compiled with love by LeafLore</p>
+          </div>
+          
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-book me-2"></i>Books Completed</span>
+            <span class="summary-val">{{ total_books_read }}</span>
+          </div>
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-file-earmark-text me-2"></i>Pages Logged</span>
+            <span class="summary-val">{{ total_pages_read }}</span>
+          </div>
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-calendar-check me-2"></i>Peak Month</span>
+            <span class="summary-val">{{ most_active_month or 'N/A' }}</span>
+          </div>
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-bookmark-star me-2"></i>Top Genre</span>
+            <span class="summary-val text-truncate" style="max-width: 150px;">{{ favorite_genre or 'N/A' }}</span>
+          </div>
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-journal-check me-2"></i>Words Mastered</span>
+            <span class="summary-val">{{ vocab_count }}</span>
+          </div>
+          <div class="summary-stat-row">
+            <span class="summary-label"><i class="bi bi-tree me-2"></i>Level Achieved</span>
+            <span class="summary-val text-warning">Level {{ level_info.level }}</span>
+          </div>
+          <div class="text-center mt-3">
+            <button class="btn btn-outline-success btn-sm w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" onclick="exportSummaryImage()" style="border-radius: 2rem; border-color: #b8860b; color: #b8860b; background: rgba(184, 134, 11, 0.05);">
+              <i class="bi bi-download"></i> Save Summary Card
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Navigation Buttons Footer -->
+  <div class="wrap-controls-footer">
+    {% if has_data %}
+      <button class="wrap-btn-nav" onclick="prevSlide()"><i class="bi bi-chevron-left"></i></button>
+      <a href="{{ url_for('dashboard.index') }}" class="wrap-btn-exit"><i class="bi bi-check2-circle"></i> Close</a>
+      <button class="wrap-btn-nav" onclick="nextSlide()"><i class="bi bi-chevron-right"></i></button>
+    {% else %}
+      <div></div>
+      <a href="{{ url_for('dashboard.index') }}" class="wrap-btn-exit"><i class="bi bi-arrow-left"></i> Back</a>
+      <div></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Slide Transition Logic Javascript -->
+<script>
+  let currentIdx = 0;
+  const slides = document.querySelectorAll(".wrap-slide");
+  const hasData = {{ 'true' if has_data else 'false' }};
+  let slideInterval = null;
+  let animStartTime = 0;
+  let activeDuration = 6000;
+  let remainingTime = 6000;
+
+  // Initialize Stories Tickers
+  if (hasData && slides.length > 0) {
+    const progressBar = document.getElementById("progress-bar");
+    progressBar.innerHTML = "";
+    slides.forEach((slide, idx) => {
+      const segment = document.createElement("div");
+      segment.className = "wrap-progress-segment";
+      if (idx === 0) segment.classList.add("active");
+      
+      const fill = document.createElement("div");
+      fill.className = "wrap-progress-fill";
+      segment.appendChild(fill);
+      progressBar.appendChild(segment);
+    });
+
+    // Start slide deck loop
+    showSlide(0);
+  }
+
+  function showSlide(index) {
+    if (!hasData) return;
+    
+    // Clear existing counters and loops
+    clearInterval(slideInterval);
+    
+    // Deactivate current active slide
+    slides[currentIdx].classList.remove("active");
+    
+    // Clamp slide boundaries
+    if (index >= slides.length) {
+      // Direct redirect back to dashboard at the end
+      window.location.href = "{{ url_for('dashboard.index') }}";
+      return;
+    }
+    if (index < 0) {
+      index = 0;
+    }
+
+    currentIdx = index;
+    const activeSlide = slides[currentIdx];
+    activeSlide.classList.add("active");
+
+    // Manage Stories Ticker progress indicator state
+    const segments = document.querySelectorAll(".wrap-progress-segment");
+    segments.forEach((segment, idx) => {
+      segment.classList.remove("active", "completed");
+      const fill = segment.querySelector(".wrap-progress-fill");
+      fill.style.width = "0%";
+      
+      if (idx < currentIdx) {
+        segment.classList.add("completed");
+        fill.style.width = "100%";
+      }
+    });
+
+    segments[currentIdx].classList.add("active");
+    activeDuration = parseInt(activeSlide.dataset.duration) || 6000;
+    remainingTime = activeDuration;
+    animStartTime = Date.now();
+
+    // Reset slide fills and trigger counter increments
+    triggerCounters(currentIdx);
+
+    // Start filling indicator
+    animateProgressBar(currentIdx, activeDuration);
+  }
+
+  function animateProgressBar(slideIndex, duration) {
+    const activeSegment = document.querySelectorAll(".wrap-progress-segment")[slideIndex];
+    if (!activeSegment) return;
+    const fill = activeSegment.querySelector(".wrap-progress-fill");
+    
+    let start = Date.now();
+    
+    function tick() {
+      if (currentIdx !== slideIndex) return; // Terminate if slide changed
+      let elapsed = Date.now() - start;
+      let pct = Math.min((elapsed / duration) * 100, 100);
+      fill.style.width = pct + "%";
+      
+      if (pct < 100) {
+        requestAnimationFrame(tick);
+      } else {
+        nextSlide();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function nextSlide() {
+    showSlide(currentIdx + 1);
+  }
+
+  function prevSlide() {
+    showSlide(currentIdx - 1);
+  }
+
+  // Keyboard navigation support
+  document.addEventListener("keydown", function (e) {
+    if (!hasData) return;
+    if (e.key === "ArrowRight" || e.key === "Space") {
+      nextSlide();
+    } else if (e.key === "ArrowLeft") {
+      prevSlide();
+    }
+  });
+
+  {% if has_data %}
+  // Animated numbers increment handlers
+  function triggerCounters(slideIndex) {
+    if (slideIndex === 1) {
+      // Slide 2: Animate books and pages read
+      animateCounter("stat-books", {{ total_books_read }}, 1200);
+      animateCounter("stat-pages", {{ total_pages_read }}, 1600);
+    }
+  }
+  {% endif %}
+
+  function animateCounter(id, targetVal, duration) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    let startVal = 0;
+    let startTime = null;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const progress = timestamp - startTime;
+      const currentVal = Math.min(Math.floor((progress / duration) * targetVal), targetVal);
+      el.textContent = currentVal;
+      
+      if (progress < duration) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = targetVal;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  {% if has_data %}
+  window.exportSummaryImage = function() {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 800;
+      const ctx = canvas.getContext("2d");
+
+      // 1. Draw radial gradient background
+      const grad = ctx.createRadialGradient(400, 400, 50, 400, 400, 600);
+      grad.addColorStop(0, "#1b241c");
+      grad.addColorStop(1, "#0a0d0a");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 800);
+
+      // 2. Draw spot glows
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const greenGlow = ctx.createRadialGradient(150, 150, 0, 150, 150, 300);
+      greenGlow.addColorStop(0, "rgba(32, 111, 25, 0.3)");
+      greenGlow.addColorStop(1, "transparent");
+      ctx.fillStyle = greenGlow;
+      ctx.beginPath(); ctx.arc(150, 150, 300, 0, Math.PI * 2); ctx.fill();
+
+      const goldGlow = ctx.createRadialGradient(650, 650, 0, 650, 650, 300);
+      goldGlow.addColorStop(0, "rgba(184, 134, 11, 0.25)");
+      goldGlow.addColorStop(1, "transparent");
+      ctx.fillStyle = goldGlow;
+      ctx.beginPath(); ctx.arc(650, 650, 300, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // 3. Draw border frame
+      ctx.strokeStyle = "#b8860b";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(30, 30, 740, 740);
+
+      // 4. Draw Header
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.font = "bold 44px Georgia, serif";
+      ctx.fillText("Your " + {{ current_year }} + " Reading Wrap", 400, 110);
+
+      ctx.fillStyle = "#a5ae8e";
+      ctx.font = "italic 20px Georgia, serif";
+      ctx.fillText("Celebrate your literary year in LeafLore", 400, 150);
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(100, 190);
+      ctx.lineTo(700, 190);
+      ctx.stroke();
+
+      // 5. Draw Stats Rows
+      const stats = [
+        { label: "Books Completed", val: "{{ total_books_read }}" },
+        { label: "Pages Logged", val: "{{ total_pages_read }}" },
+        { label: "Peak Month", val: "{{ most_active_month or 'N/A' }}" },
+        { label: "Top Genre", val: "{{ favorite_genre or 'N/A' }}" },
+        { label: "Words Mastered", val: "{{ vocab_count }}" },
+        { label: "Level Achieved", val: "Level " + {{ level_info.level }} + " ({{ level_info.title }})" }
+      ];
+
+      let startY = 240;
+      const rowHeight = 70;
+
+      stats.forEach((stat, idx) => {
+        const yPos = startY + (idx * rowHeight);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+        ctx.fillRect(100, yPos - 35, 600, 56);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.strokeRect(100, yPos - 35, 600, 56);
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#a5ae8e";
+        ctx.font = "500 22px system-ui, sans-serif";
+        ctx.fillText(stat.label, 130, yPos + 2);
+
+        ctx.textAlign = "right";
+        if (stat.label.includes("Level")) {
+          ctx.fillStyle = "#b8860b";
+          ctx.font = "bold 22px Georgia, serif";
+        } else {
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 22px Georgia, serif";
+        }
+        ctx.fillText(stat.val, 670, yPos + 2);
+      });
+
+      // 6. Draw Footer Branding
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.textAlign = "center";
+      ctx.font = "16px system-ui, sans-serif";
+      ctx.fillText("leaflore.app • Compiled with love", 400, 715);
+
+      // 7. Trigger download
+      const link = document.createElement("a");
+      link.download = "LeafLore_Reading_Wrap_" + {{ current_year }} + ".png";
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch(e) {
+      console.error("Canvas export failed: ", e);
+      alert("Failed to export image. Please try again.");
+    }
+  };
+  {% endif %}
+</script>
+
+{% endblock %}

@@ -1,0 +1,469 @@
+================================================================================
+                    LEAFLORE - BEGINNER-FRIENDLY PROJECT GUIDE
+================================================================================
+
+Welcome to LeafLore! This document provides a highly detailed, beginner-friendly
+breakdown of the entire codebase. Whether you are new to web development, Python,
+databases, or frontend design, this guide will walk you through how every single
+component connects and works together.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. What is LeafLore?
+2. Technical Architecture & Tech Stack
+3. Complete Folder & File Directory Walkthrough
+4. Detailed Database Structure (Schema)
+5. How the Core Features Work (Step-by-Step)
+   - User Accounts, Session Security & Brute-Force Rate Limiting
+   - XP, Levels, and Streak Tracking
+   - The Focus Oasis (Pomodoro Timer & Web Audio Soundscapes)
+   - The Reading Garden Heatmap
+   - Content-Based Book Recommendations (TF-IDF & Cosine Similarity)
+   - Genuine ML Completion Predictor (Logistic Regression Classifier)
+   - Personalized Reading Insights (Pace, Focus Boost, Correlation)
+   - The Reading Wrap & Canvas Image Exporter
+6. Edge Cases & Safe Input Handling
+7. Testing & Verification Architecture
+8. Glossary of Terms for Beginners
+
+================================================================================
+1. WHAT IS LEAFLORE?
+================================================================================
+LeafLore is a gamified reading journal application designed to turn reading into
+an interactive adventure. Instead of just listing books, users can:
+- Track their active reading progress.
+- Keep reading journals and notes.
+- Study vocabulary words using 3D-flipping flashcards.
+- Complete timed focus sessions accompanied by ambient soundscapes.
+- Earn Experience Points (XP), level up, and unlock animated achievement badges.
+- View a visual "Reading Garden" heatmap of their annual consistency.
+- Generate a Spotify-style "Reading Wrap" stats card and export it as an image.
+- View real-time Completion Probability calculated by a Machine Learning model.
+- See custom behavioral insights analyzing their reading habits.
+
+================================================================================
+2. TECHNICAL ARCHITECTURE & TECH STACK
+================================================================================
+LeafLore is built using a classic "Model-View-Controller" (MVC) pattern:
+
+- BACKEND (Python & Flask):
+  Flask serves as the web server. It handles incoming requests (like clicking a
+  link or submitting a form), executes Python code (like saving data to the
+  database or calculating a streak), and sends back the HTML page to the browser.
+  
+- DATABASE (SQLite & SQLAlchemy):
+  SQLite is a lightweight, file-based SQL database stored directly in the project
+  folder (leaflore.db). SQLAlchemy is an Object-Relational Mapper (ORM), which
+  means it lets us write Python code to search, add, or delete data instead of
+  writing raw SQL queries.
+
+- FRONTEND (HTML, CSS, JavaScript):
+  - HTML (Jinja2 Templates): Defines the structure of the pages. Jinja2 lets us
+    embed Python-like logic (loops, conditions, variables) inside the HTML.
+  - CSS (Vanilla CSS): Custom styled elements using variables to support a
+    cohesive Forest Green theme (`#206f19`) and a seamless light/dark mode.
+  - JavaScript: Adds dynamic interactions, handles background server calls (AJAX),
+    animates the canvas background, synthesizes sounds, and renders analytics.
+
+- MACHINE LEARNING & STATISTICAL ANALYTICS (scikit-learn & pandas):
+  - TF-IDF + Cosine Similarity: Powers our content-based wishlist recommendations.
+  - Logistic Regression Classifier: Predicts book completion likelihoods.
+  - pandas: Processes rolling reading averages and monthly trends.
+
+- SECURITY ENVELOPE:
+  - Custom Content Security Policy (CSP): Prevents XSS script injections.
+  - Login Rate Limiter: Session/IP attempt caps preventing brute-forcing.
+  - Payload caps (2MB) and secure session cookies (HTTPOnly, SameSite='Lax').
+
+================================================================================
+3. COMPLETE FOLDER & FILE DIRECTORY WALKTHROUGH
+================================================================================
+
+Here is the purpose of every file in the LeafLore project:
+
+------------------------------------
+ROOT DIRECTORY
+------------------------------------
+- app.py
+  The core starting point of the server. It imports the app factory, sets up
+  configurations, registers Blueprints (routes), implements security headers,
+  and ensures database tables are created.
+
+- config.py
+  Holds configuration settings for the app, such as database paths, secret keys
+  used to secure cookies, and external API URLs (like the Google Books API).
+
+- extensions.py
+  Initializes Flask extensions so they can be shared across different files:
+  - db: The SQLAlchemy database connector.
+  - csrf: Security protection against Cross-Site Request Forgery.
+  - login_manager: Manages user login states and sessions.
+
+- requirements.txt
+  A list of all external Python libraries needed to run LeafLore (e.g. Flask,
+  SQLAlchemy, scikit-learn, requests).
+
+- utils.py
+  A collection of shared helper functions used by multiple routes:
+  - get_streak(user_id): Computes current consecutive daily reading streaks.
+  - goal_progress(user_id, year): Computes target vs completed books.
+  - map_category_to_genre(cat, title, desc): Matches API genres to database genres.
+  - search_google_books(query): Queries Google Books and normalizes results.
+  - check_new_achievements(user_id): Checks if user unlocked a badge and triggers a toast.
+
+------------------------------------
+MODELS (models/) - Database Tables
+------------------------------------
+- models/__init__.py
+  Bundles all models together for easy importing elsewhere in the project.
+
+- models/user.py
+  Defines the 'User' table: stores user ID, username, email, and password hashes.
+
+- models/book.py
+  Defines the 'Book' table: stores title, author, genre, total page count,
+  current progress, date added, date completed, and status (reading, want-to-read, etc).
+
+- models/reading_log.py
+  Defines the 'ReadingLog' table: records every time a user logs pages, including
+  the date, the book read, focus session flags, and session duration.
+
+- models/note.py
+  Defines the 'Note' table: stores chapter notes written by the user linked to a book.
+
+- models/goal.py
+  Defines the 'Goal' table: stores the user's annual reading targets.
+
+- models/vocabulary.py
+  Defines the 'VocabularyWord' table: holds terms, definitions, context, and book links.
+
+------------------------------------
+MODELS (ml/) - Analytics & Predictions
+------------------------------------
+- ml/recommender.py
+  Content-based 'read next' recommendation engine using TF-IDF + Cosine Similarity.
+
+- ml/analytics.py
+  Processes pandas series for monthly progress, rolling pace, and finish predictions.
+
+- ml/completion_predictor.py
+  Personalized classification model using scikit-learn's `LogisticRegression` to
+  predict completion probability of books.
+
+- ml/insights.py
+  Generates personalized reading behavior profiles (focus boosts, weekly active trends).
+
+------------------------------------
+ROUTES (routes/) - Page Blueprints
+------------------------------------
+Blueprints divide pages into modular Python controllers:
+
+- routes/auth.py
+  Handles user signup, password security verification, login forms, rate limiting, and logout.
+
+- routes/books.py
+  Handles pages related to shelves: viewing books, adding/editing books manually
+  or via Google Books, updating shelf status, and deleting books.
+
+- routes/dashboard.py
+  Loads the homepage containing stats charts, the Reading Heatmap data, the
+  Focus Oasis widget, and the annual "Reading Wrap" slideshow.
+
+- routes/logs.py
+  Processes forms when adding pages read manually to update user progress.
+
+- routes/notes.py
+  Processes forms for adding, reading, and deleting chapter journals/notes.
+
+- routes/vocabulary.py
+  Manages glossary / Word Bank operations (adding terms, editing, deleting, listing).
+
+------------------------------------
+STATIC (static/) - Styles & Scripts
+------------------------------------
+- static/css/style.css
+  The master stylesheet. It uses CSS variables to style colors, borders, cards,
+  and handles transitions between light and dark modes.
+
+- static/js/theme.js
+  Handles toggling light and dark modes, saves preferences to the browser's
+  `localStorage`, and dispatches custom events to update Chart.js.
+
+- static/js/particles.js
+  Creates a fullscreen canvas animation behind pages. It renders floating elements
+  and listens for click/drag events to simulate wind storms.
+
+- static/js/charts.js
+  Draws the progress charts on the dashboard using Chart.js.
+
+- static/js/add_book.js
+  Powers the Google Books search input. It delays typing queries (debouncing),
+  sends background requests, and automatically fills form elements.
+
+- static/js/calendar.js
+  Renders the interactive Reading Heatmap grid, configures mouse tooltips, and
+  triggers flying leaf particle bursts when you click on a calendar block.
+
+- static/js/recommendations.js
+  Fetches book suggestions dynamically and lists them on the dashboard.
+
+------------------------------------
+TEMPLATES (templates/) - HTML Pages
+------------------------------------
+- templates/base.html
+  The blueprint page wrapper. Contains the navigation bar, sidebar, theme toggle,
+  canvas overlay, and holds the pop-up "Trophy Toast" alert.
+
+- templates/login.html & templates/register.html
+  Auth pages. Feature password strength indicators, a 2-step setup wizard,
+  and mouse-glowing glassmorphic cards.
+
+- templates/dashboard.html
+  The central hub. Houses the XP rank bar, Currently Reading shelves, Focus Space
+  timer, and the Reading Garden heatmap.
+
+- templates/book_detail.html
+  The detailed overview page for a book. Renders the focus predictor card, progress
+  bar, manual page loggers, and notes timeline.
+
+- templates/my_books.html
+  Lists shelves in grid layouts or switches to a realistic 3D wooden bookshelf spine view.
+
+- templates/vocabulary.html
+  The Word Bank page. Displays search lists and a 3D-flipping card review game.
+
+- templates/wrap.html
+  The annual reading recap. Built as an automated slides presenter with stats counters
+  and a downloadable recap image exporter.
+
+================================================================================
+4. DETAILED DATABASE STRUCTURE (SCHEMA)
+================================================================================
+LeafLore uses an SQL database. The relations and tables are linked as follows:
+
+   [users] 1 ------ * [books] 1 ------ * [reading_logs]
+      |                 |
+      |                 + ------------ * [notes]
+      |                 |
+      + --------------- | ------------ * [vocabulary_words]
+      |
+      + ---------------- ------------- * [goals]
+
+- FOREIGN KEYS & CASCADE DELETE:
+  To prevent "orphaned" database entries, database columns are linked. If you
+  delete a Book, SQL cascades the deletion to automatically remove all associated
+  reading logs, chapter notes, and vocabulary words linked to that book.
+
+================================================================================
+5. HOW THE CORE FEATURES WORK (STEP-BY-STEP)
+================================================================================
+
+--------------------------------------------------------------------------------
+USER ACCOUNTS, SESSION SECURITY & RATE LIMITING
+--------------------------------------------------------------------------------
+1. Registration:
+   - RegistrationForm in `forms.py` validates inputs.
+   - Passwords are encrypted before database insertion using scikit-learn / Werkzeug
+     password hashing algorithms.
+2. Login & Rate Limiting:
+   - To protect against brute-force dictionary attacks, `routes/auth.py` checks
+     incoming request IPs.
+   - If an IP exceeds 5 login submissions within 60 seconds, it triggers a
+     `429 Too Many Requests` response.
+   - Successful logins drop attempts. Flask-Login creates a session cookie.
+3. Cookie & Request Hardening:
+   - Configures `SESSION_COOKIE_HTTPONLY=True` to block JavaScript access to cookies.
+   - Configures `SESSION_COOKIE_SAMESITE='Lax'` to block cross-site request attacks.
+   - Limits payload size to 2MB (`MAX_CONTENT_LENGTH`) preventing DDoS buffer overloads.
+
+--------------------------------------------------------------------------------
+XP, LEVELS, AND STREAK TRACKING
+--------------------------------------------------------------------------------
+1. Users earn Experience Points (XP) for actions:
+   - Log 1 page: +10 XP
+   - Finish a book: +150 XP
+   - Add a chapter note: +25 XP
+   - Timed focus session completed: +50 XP
+   - Streak bonus: +15 XP multiplied by consecutive days read.
+2. Streak Calculation:
+   - `get_streak` in `utils.py` queries all unique dates the user logged reading.
+   - It checks if the user logged today or yesterday. If not, the streak resets to 0.
+   - If yes, it walks backward day-by-day, counting consecutive days until it finds
+     a day with no logs.
+3. Level Info:
+   - `calculate_level` in `routes/dashboard.py` maps total XP to brackets:
+     * Level 1: Seedling (0 - 300 XP)
+     * Level 2: Sprout (300 - 800 XP)
+     * Level 3: Sapling (800 - 1800 XP)
+     * Level 4: Oak Reader (1800 - 3500 XP)
+     * Level 5: Forest Sage (3500+ XP)
+
+--------------------------------------------------------------------------------
+THE FOCUS OASIS (POMODORO & MIXER)
+--------------------------------------------------------------------------------
+1. Timer Control:
+   - The user selects a book and chooses Pomodoro (25-minute countdown) or Stopwatch.
+   - A circular SVG path animates. The circle's length is `478px` (computed by the
+     mathematical circumference 2 * pi * r).
+   - In Javascript, we adjust the `strokeDashoffset` dynamically as time passes to
+     fill the circle.
+   - During focus, we automatically dial down the background canvas leaf speed to 0.4x
+     to keep the environment peaceful.
+2. Web Audio Soundscape Mixer:
+   - All ambient tracks are generated *entirely offline* in real-time inside your
+     browser using the Web Audio API (no heavy MP3 downloads!).
+   - White Noise Generation: We fill a raw audio buffer with random numbers (`Math.random()`)
+     to simulate noise.
+   - Synth Mixer nodes:
+     * **Rain**: Feeds the noise buffer through a Bandpass filter at 800Hz and a Lowpass
+       filter at 2500Hz to create a soft, soothing patter.
+     * **Wind**: Feeds the noise buffer through a Bandpass filter and modulates the center
+       frequency using a slow Sine Wave oscillator (LFO at 0.08Hz) to make the wind guest
+       and whistle naturally.
+     * **Campfire**: Adds low-frequency rumbling filters and uses a ScriptProcessor node
+       to generate random spike impulses simulating wood crackles.
+
+--------------------------------------------------------------------------------
+THE READING GARDEN HEATMAP
+--------------------------------------------------------------------------------
+1. We query daily page counts logged during the last 371 days (53 weeks).
+2. The UI renders this data as a grid of soil patches.
+3. The cells display different graphics based on your consistency:
+   - 0 pages logged: Soil patch (earthy color)
+   - 1-10 pages: Young Sprout (🌱)
+   - 11-30 pages: Growing Stem (🌿)
+   - 31-50 pages: Blooming Flower (🌸)
+   - 50+ pages: Golden Crown (👑)
+4. When a cell is clicked, we trigger a 3D leaf particle burst that flings 8 small green leaves
+   outward from the click coordinates using mathematical sine/cosine vectors.
+
+--------------------------------------------------------------------------------
+BOOK RECOMMENDATIONS (TF-IDF & COSINE SIMILARITY)
+--------------------------------------------------------------------------------
+1. This is a Content-Based Recommendation Engine using Natural Language Processing.
+2. When you finish a book, it becomes your "Taste Anchor".
+3. We take the title, author, genre, and description of your Taste Anchor and join
+   them into one string. We do the same for all books on your "Want to Read" shelf.
+4. TF-IDF Vectorization:
+   - TF-IDF stands for Term Frequency-Inverse Document Frequency.
+   - It converts the book text strings into mathematical vectors by counting how often
+     important words appear, while ignoring common words (like "the", "and", "is").
+5. Cosine Similarity:
+   - We calculate the geometric angle between the anchor book's vector and each candidate
+     book's vector.
+   - A cosine score of `1.0` means they are extremely similar; `0.0` means they share no
+     important words.
+   - We sort your "Want to Read" shelf by this score and display the top matches.
+
+--------------------------------------------------------------------------------
+GENUINE ML COMPLETION PREDICTOR (LOGISTIC REGRESSION)
+--------------------------------------------------------------------------------
+1. Model Feature Extraction:
+   - When a user views an in-progress book details page, we compile historical books
+     in the database (across all users in SQLite to maximize sample size).
+   - We map each book's activity into a feature array:
+     * Feature 0: `total_pages / 100.0` (Scale normalization)
+     * Feature 1: `logs_count` (Reading frequency)
+     * Feature 2: `avg_pages_per_log` (Reading volume speed)
+     * Feature 3: `focus_ratio` (Dedicated timer reading consistency)
+     * Feature 4: `notes_count` (Active note-taking commitment)
+2. Machine Learning Training:
+   - The target label `y` is set: `1` if the book status is "completed", `0` if in-progress
+     (reading) and has reading log activity.
+   - If the database contains at least 5 books with activity AND contains both classes
+     (at least one completed and one incomplete book), we fit a scikit-learn
+     `LogisticRegression` classifier.
+   - We run `.predict_proba([target_features])[0][1]` to calculate the mathematical
+     probability percentage of completion.
+3. Cold-Start Fallback Heuristic:
+   - If there is insufficient data (less than 5 books, or only one status class exists),
+     the system falls back to a weighted baseline heuristic model.
+   - The baseline starts at `40% - 70%` (scaled on progress percentage) and gains up to
+     `+24%` for chapter notes, `+18%` for focus logs, and applies a `-12%` penalty
+     for heavy books (>500 pages).
+
+--------------------------------------------------------------------------------
+PERSONALIZED READING INSIGHTS
+--------------------------------------------------------------------------------
+1. Aggregates behavioral patterns from `ReadingLog` and `Note` tables:
+   - **Peak Reading Day**: Computes the day of the week with the highest sum of
+     pages read.
+   - **Focus Boost**: Calculates your average pages-per-minute speed during timed
+     Focus sessions, translating it to pages-per-hour speed.
+   - **Active Study Boost**: Compares your average pages logged per entry between books
+     with active chapter notes vs. books without notes to measure commitment correlation.
+   - **Session Consistency**: Calculates average pages read per session.
+2. The results are loaded on the main dashboard in a dedicated insights panel.
+
+--------------------------------------------------------------------------------
+THE READING WRAP & CANVAS IMAGE EXPORTER
+--------------------------------------------------------------------------------
+1. The Reading Wrap calculates annual stats (Fastest Book Read, Top Genre, Most Active Month).
+2. The exporter lets users download their stats as a PNG image card.
+3. How HTML5 Canvas drawing works:
+   - We create an offscreen, double-resolution `<canvas>` element (e.g. 800x1200 pixels
+     for high definition).
+   - We draw a dark glassmorphic green gradient background.
+   - We draw custom gold border frames.
+   - We write the user's name and stats (titles, numbers, levels) using custom fonts
+     via the `ctx.fillText` API.
+   - We output the canvas to a data URL string (`canvas.toDataURL("image/png")`).
+   - We create a temporary, hidden link `<a>` element, set its source to the data URL,
+     and trigger `click()` to download the image.
+
+================================================================================
+6. EDGE CASES & SAFE INPUT HANDLING
+================================================================================
+LeafLore implements validation parameters to prevent common tracking bugs:
+- **Duplicate Books Protection**: Handled on the manual entry form by checking
+  database titles/authors to prevent users from double-adding books.
+- **Negative Value Constraints**: Validated by HTML5 controls and WTForms `NumberRange`
+  validators to block negative page numbers or target goals.
+- **Over-logging Bounds**: If logged pages exceed the book's total pages, the system
+  commits the update but flashes a warning banner suggesting the user update the
+  total page count or mark the book completed.
+- **Timezone-Consistent Streaks**: Streaks are anchored on the server's timezone date.
+  If a user has not logged today, the system looks at yesterday's date to check if the
+  streak is active. Dates are saved as standard UTC date objects in SQL to prevent
+  sub-daily drift bugs.
+
+================================================================================
+7. TESTING & VERIFICATION ARCHITECTURE
+================================================================================
+LeafLore includes an automated test suite executed via `pytest` consisting of
+20 distinct unit and integration test blocks:
+- **Authentication Flows**: Validates user sign-up, validation boundaries, password
+  hashing consistency, and login rate limiter triggers.
+- **CRUD Operations**: Tests manual book entries, chapter note additions, status changes,
+  and vocabulary Word Bank entries (including search, edits, and deletions).
+- **Security Boundaries**: Verifies that a user cannot query or access books, notes,
+  or vocabulary terms belonging to a different user.
+- **Analytics & ML Vectors**: Verifies that:
+  * Pace calculations and predicted finish dates compute properly.
+  * TF-IDF vectors correctly evaluate cosine similarities.
+  * The `map_category_to_genre` function handles complex categories (e.g. Science Fiction -> Sci-Fi)
+    and uses title/description keyword triggers (e.g. "The Hobbit" -> Fantasy) correctly.
+  * The `LogisticRegression` classifier trains and predicts correctly.
+
+================================================================================
+8. GLOSSARY OF TERMS FOR BEGINNERS
+================================================================================
+- MVC (Model-View-Controller): A software design pattern.
+  * Model: The database tables (what data exists).
+  * View: The HTML templates (what the user sees).
+  * Controller: The routes (the logic linking models and views).
+- ORM (Object-Relational Mapper): A library (like SQLAlchemy) that lets you
+  interact with a database using object-oriented code instead of raw SQL queries.
+- Hashing: A one-way encryption function. You can hash a password to save it safely,
+  but you can never convert the hash back to the original password.
+- Devouncing: A programming technique to limit how often a function is called.
+  When typing in a search bar, we wait 400 milliseconds *after* you stop typing
+  before sending an API request, preventing server overload.
+- Web Audio API: A powerful browser system for synthesizing and manipulating
+  audio directly in JavaScript.
+- TF-IDF: A method to represent text as numbers so computers can evaluate which
+  words are unique and calculate similarities.
+- Jinja2: A template engine for Python. It allows writing variables (`{{ name }}`)
+  and control flow (`{% if %}`) directly inside HTML files.
+================================================================================

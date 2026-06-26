@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeafLore — You're Offline</title>
+  <style>
+    :root {
+      --bg: #0f1a0f;
+      --bg-card: rgba(18, 28, 18, 0.95);
+      --green: #206f19;
+      --green-light: #4ec344;
+      --text: #d4e4cc;
+      --text-muted: #7a9a70;
+      --border: rgba(32, 111, 25, 0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 36px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(32,111,25,0.1);
+    }
+    .icon-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(32, 111, 25, 0.15);
+      border: 2px solid rgba(32, 111, 25, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      margin: 0 auto 24px;
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 20px 0 28px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(32, 111, 25, 0.3);
+      background: rgba(32, 111, 25, 0.08);
+      color: #7dc870;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .badge.queued {
+      border-color: rgba(255, 170, 0, 0.4);
+      background: rgba(255, 170, 0, 0.08);
+      color: #ffcc44;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 22px;
+      border-radius: 10px;
+      border: none;
+      background: var(--green);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn:hover { background: #268f1e; transform: translateY(-1px); }
+    .queue-count {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+    }
+    #queue-count-val { color: #ffcc44; font-weight: 600; }
+    .footer-logo {
+      margin-top: 32px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-circle">🌿</div>
+    <h1>You're offline</h1>
+    <p>
+      No internet connection right now. That's okay — LeafLore keeps your reading data safe.
+      Any logs you submit will be saved locally and synced automatically when you're back online.
+    </p>
+
+    <div class="badge-row">
+      <span class="badge">✓ Offline logging available</span>
+      <span class="badge">✓ Vocabulary saved locally</span>
+      <span class="badge queued" id="badge-queued" style="display:none;">
+        ⏳ <span id="queue-count-val">0</span> item(s) queued
+      </span>
+    </div>
+
+    <a href="/dashboard/" class="btn" onclick="return checkOnline()">
+      🔄 Try again
+    </a>
+
+    <p class="queue-count" id="queue-info" style="display:none;">
+      <span id="queue-count-val2">0</span> action(s) will sync automatically when you reconnect.
+    </p>
+  </div>
+  <p class="footer-logo">🍃 LeafLore — Your Reading Sanctuary</p>
+
+  <script>
+    function checkOnline() {
+      if (navigator.onLine) return true;
+      alert('Still offline. Please check your connection.');
+      return false;
+    }
+
+    // Show queued items count from IndexedDB
+    function showQueueCount() {
+      if (!window.indexedDB) return;
+      var req = indexedDB.open('leaflore-offline-db', 1);
+      req.onsuccess = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('offline-queue')) return;
+        var tx = db.transaction('offline-queue', 'readonly');
+        var store = tx.objectStore('offline-queue');
+        var countReq = store.count();
+        countReq.onsuccess = function () {
+          var n = countReq.result;
+          if (n > 0) {
+            document.querySelectorAll('#queue-count-val, #queue-count-val2').forEach(function (el) {
+              el.textContent = n;
+            });
+            document.getElementById('badge-queued').style.display = '';
+            document.getElementById('queue-info').style.display = '';
+          }
+        };
+      };
+    }
+
+    showQueueCount();
+    window.addEventListener('online', function () {
+      window.location.href = '/dashboard/';
+    });
+  </script>
+</body>
+</html>

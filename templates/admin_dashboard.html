@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Admin Control Center · LeafLore{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 text-primary" style="font-family: 'Fraunces', serif;">Admin Control Center</h2>
+        <p class="text-secondary mb-0">Manage system operations, database metrics, and user access levels.</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Ops Health stats (Combined Section) -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-transparent border-0 pt-3 pb-0">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-heart-pulse text-success fs-4"></i>
+          <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Ops System Health</h5>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-people-fill text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_users }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Users</p>
+            </div>
+          </div>
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-bookshelf text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_books }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Books</p>
+            </div>
+          </div>
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-journal-check text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_logs }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Logs</p>
+            </div>
+          </div>
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-flag text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_goals }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Goals</p>
+            </div>
+          </div>
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-translate text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_words }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Vocabulary</p>
+            </div>
+          </div>
+          <div class="col-6 col-md-2">
+            <div class="card card-body text-center p-3 border shadow-none">
+              <i class="bi bi-database-fill-check text-success fs-4 mb-2"></i>
+              <h4 class="fw-bold mb-0 text-primary">{{ total_pages }}</h4>
+              <p class="text-secondary small mb-0 mt-1">Global Pages</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-light-subtle small">
+              <span class="text-secondary"><i class="bi bi-hdd-network me-1"></i> Database Size (Local SQLite)</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ db_size_kb }} KB</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-light-subtle small">
+              <span class="text-secondary"><i class="bi bi-check-circle me-1"></i> Database Connection</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Healthy</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Management Table -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-transparent border-0 pt-3 pb-0">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-gear text-success fs-4"></i>
+          <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Registered User Management</h5>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>User Details</th>
+                <th>Role</th>
+                <th>Created At</th>
+                <th class="text-center">Books</th>
+                <th class="text-center">Logs</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+              <tr>
+                <td><span class="text-secondary fw-semibold">{{ u.id }}</span></td>
+                <td>
+                  <div class="fw-bold text-primary">{{ u.username }}</div>
+                  <div class="text-secondary small">{{ u.email }}</div>
+                </td>
+                <td>
+                  {% if u.is_admin %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-shield-lock-fill"></i> Admin</span>
+                  {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">User</span>
+                  {% endif %}
+                </td>
+                <td class="text-secondary small">{{ u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else 'N/A' }}</td>
+                <td class="text-center fw-bold text-success">{{ u.books_count }}</td>
+                <td class="text-center fw-bold text-success">{{ u.logs_count }}</td>
+                <td>
+                  <div class="d-flex justify-content-end gap-2 flex-wrap">
+                    <!-- Impersonate User -->
+                    <form method="POST" action="{{ url_for('admin.impersonate', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Do you want to log in and impersonate user {{ u.username }}?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-info btn-sm px-2 py-1" title="Impersonate User" aria-label="Impersonate {{ u.username }}">
+                        <i class="bi bi-incognito"></i> <span class="d-none d-md-inline ms-1">Impersonate</span>
+                      </button>
+                    </form>
+
+                    <!-- Toggle Role -->
+                    {% if u.id != current_user.id %}
+                    <form method="POST" action="{{ url_for('admin.toggle_role', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to toggle the admin role for {{ u.username }}?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-warning btn-sm px-2 py-1" title="Toggle Admin Role" aria-label="Toggle Admin Role for {{ u.username }}">
+                        <i class="bi bi-shield-check"></i> <span class="d-none d-md-inline ms-1">Toggle Role</span>
+                      </button>
+                    </form>
+                    {% endif %}
+
+                    <!-- Seed Demo Data -->
+                    <form method="POST" action="{{ url_for('admin.seed_user_demo', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('WARNING: Seeding demo data will wipe all current books and reading logs for {{ u.username }}. Proceed?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-success btn-sm px-2 py-1" title="Seed Demo Data" aria-label="Seed Demo Data for {{ u.username }}">
+                        <i class="bi bi-database-fill-gear"></i> <span class="d-none d-md-inline ms-1">Seed</span>
+                      </button>
+                    </form>
+
+                    <!-- Reset User Data -->
+                    <form method="POST" action="{{ url_for('admin.reset_user_data', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('WARNING: This will wipe all books, logs, notes, achievements, and goals for {{ u.username }}, returning them to a blank slate. This action cannot be undone. Proceed?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-warning btn-sm px-2 py-1 text-dark" title="Reset User Data" aria-label="Reset Reading Data for {{ u.username }}">
+                        <i class="bi bi-trash3"></i> <span class="d-none d-md-inline ms-1">Reset</span>
+                      </button>
+                    </form>
+
+                    <!-- Delete User -->
+                    {% if u.id != current_user.id %}
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('WARNING: Are you absolutely sure you want to permanently delete user account {{ u.username }} and all of their data? This action is permanent and cannot be undone!');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-1" title="Delete User Account" aria-label="Delete User {{ u.username }}">
+                        <i class="bi bi-person-x"></i> <span class="d-none d-md-inline ms-1">Delete</span>
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

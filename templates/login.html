@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Log in · LeafLore{% endblock %}
+{% block content %}
+<!-- Decorative Background Bubbles -->
+<div class="auth-decorations">
+  <div class="bubble bubble-1"></div>
+  <div class="bubble bubble-2"></div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card auth-card shadow-sm border-0">
+      <div class="card-body p-4">
+        <!-- Aesthetic Circle Icon Circle -->
+        <div class="text-center">
+          <div class="auth-icon-circle">
+            <i class="bi bi-journal-bookmark-fill"></i>
+          </div>
+        </div>
+        
+        <h4 class="mb-3 text-center">Welcome back</h4>
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), autofocus=true) }}
+            {% for err in form.email.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            <div class="position-relative">
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), style="padding-right: 45px;") }}
+              <button class="btn p-0 border-0 position-absolute end-0 top-50 translate-middle-y me-3" type="button" id="toggle-password" style="background: transparent; color: var(--text-secondary); z-index: 10; height: auto; min-height: 0; box-shadow: none;">
+                <i class="bi bi-eye" id="toggle-password-icon"></i>
+              </button>
+            </div>
+            {% for err in form.password.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          <div class="form-check mb-3">
+            {{ form.remember(class="form-check-input") }}
+            {{ form.remember.label(class="form-check-label") }}
+          </div>
+          {{ form.submit(class="btn btn-success w-100") }}
+        </form>
+        <hr class="my-4 text-muted opacity-25">
+        <div class="text-center">
+          <span class="small text-secondary d-block mb-2">New here?</span>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-outline-success w-100">Create an account</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Parallax interactive cursor glow
+    const card = document.querySelector(".auth-card");
+    if (card) {
+      card.addEventListener("mousemove", function (e) {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty("--mouse-x", `${x}px`);
+        card.style.setProperty("--mouse-y", `${y}px`);
+      });
+    }
+
+    // Toggle password visibility
+    const togglePasswordBtn = document.getElementById("toggle-password");
+    const passwordInput = document.querySelector("input[type='password']");
+    const passwordIcon = document.getElementById("toggle-password-icon");
+    if (togglePasswordBtn && passwordInput && passwordIcon) {
+      togglePasswordBtn.addEventListener("click", function () {
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          passwordIcon.classList.remove("bi-eye");
+          passwordIcon.classList.add("bi-eye-slash");
+        } else {
+          passwordInput.type = "password";
+          passwordIcon.classList.remove("bi-eye-slash");
+          passwordIcon.classList.add("bi-eye");
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

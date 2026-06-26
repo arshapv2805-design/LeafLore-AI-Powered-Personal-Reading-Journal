@@ -1,0 +1,21 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Deploy Hook
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "Triggering deployment..."
+            curl -f -s -S -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+            echo "Deploy trigger sent successfully."
+          else
+            echo "WARNING: RENDER_DEPLOY_HOOK_URL secret is not configured. Skipping deploy trigger."
+          fi

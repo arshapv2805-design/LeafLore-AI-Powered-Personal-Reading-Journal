@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% block title %}Sign up · LeafLore{% endblock %}
+{% block content %}
+<style>
+  /* Local styles to bypass cached external CSS files */
+  .wizard-overflow-container {
+    overflow: hidden;
+    width: 100%;
+    position: relative;
+  }
+  .wizard-step {
+    display: none;
+    opacity: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .wizard-step.active {
+    display: block;
+  }
+  .wizard-step.show {
+    opacity: 1;
+    transform: translateX(0) !important;
+  }
+  /* GPU-Accelerated Hardware Slide Directions */
+  .wizard-step.slide-in-right {
+    display: block;
+    transform: translateX(20px) !important;
+    opacity: 0;
+  }
+  .wizard-step.slide-in-left {
+    display: block;
+    transform: translateX(-20px) !important;
+    opacity: 0;
+  }
+  .criteria-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 0.4rem;
+  }
+</style>
+
+<!-- Decorative Background Bubbles -->
+<div class="auth-decorations">
+  <div class="bubble bubble-1"></div>
+  <div class="bubble bubble-2"></div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card auth-card shadow-sm border-0">
+      <div class="card-body p-4">
+        <!-- Aesthetic Circle Icon Header -->
+        <div class="text-center">
+          <div class="auth-icon-circle">
+            <i class="bi bi-journal-bookmark-fill"></i>
+          </div>
+        </div>
+        
+        <h4 class="mb-4 text-center">Start your shelf</h4>
+
+        <form method="POST" novalidate id="register-form">
+          {{ form.hidden_tag() }}
+          <div class="wizard-overflow-container">
+            
+            <!-- Step 1: Identity -->
+            <div class="wizard-step active show" id="step-1">
+              <div class="mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), autofocus=true, id="username", placeholder="Enter username") }}
+                <div class="invalid-feedback" id="username-client-feedback" style="display:none;">Username must be at least 3 characters.</div>
+                {% for err in form.username.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+              </div>
+              <div class="mb-4">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), id="email", placeholder="name@example.com") }}
+                <div class="invalid-feedback" id="email-client-feedback" style="display:none;">Please enter a valid email address.</div>
+                {% for err in form.email.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+              </div>
+              <button type="button" class="btn btn-success w-100" id="btn-next">Next step <i class="bi bi-arrow-right ms-1"></i></button>
+            </div>
+
+            <!-- Step 2: Security -->
+            <div class="wizard-step" id="step-2">
+              <div class="mb-3">
+                {{ form.password.label(class="form-label") }}
+                <div class="position-relative">
+                  {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), id="password", placeholder="Create password", style="padding-right: 45px;") }}
+                  <button class="btn p-0 border-0 position-absolute end-0 top-50 translate-middle-y me-3" type="button" id="toggle-password" style="background: transparent; color: var(--text-secondary); z-index: 10; height: auto; min-height: 0; box-shadow: none;">
+                    <i class="bi bi-eye" id="toggle-password-icon"></i>
+                  </button>
+                </div>
+                {% for err in form.password.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+                
+                <!-- Real-time Password Strength Criteria checklist -->
+                <div class="password-criteria-box mt-2" id="password-criteria-box">
+                  <ul class="criteria-list">
+                    <li class="criteria-item" id="crit-length">
+                      <i class="bi bi-x-circle-fill text-danger" id="icon-length"></i> 6+ characters
+                    </li>
+                    <li class="criteria-item" id="crit-length-long">
+                      <i class="bi bi-x-circle-fill text-danger" id="icon-length-long"></i> 10+ characters
+                    </li>
+                    <li class="criteria-item" id="crit-capital">
+                      <i class="bi bi-x-circle-fill text-danger" id="icon-capital"></i> 1 Capital letter
+                    </li>
+                    <li class="criteria-item" id="crit-number">
+                      <i class="bi bi-x-circle-fill text-danger" id="icon-number"></i> 1 Number
+                    </li>
+                    <li class="criteria-item" id="crit-special">
+                      <i class="bi bi-x-circle-fill text-danger" id="icon-special"></i> 1 Special character
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                {{ form.confirm_password.label(class="form-label") }}
+                <div class="position-relative">
+                  {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), id="confirm_password", placeholder="Repeat password", style="padding-right: 45px;") }}
+                  <button class="btn p-0 border-0 position-absolute end-0 top-50 translate-middle-y me-3" type="button" id="toggle-confirm-password" style="background: transparent; color: var(--text-secondary); z-index: 10; height: auto; min-height: 0; box-shadow: none;">
+                    <i class="bi bi-eye" id="toggle-confirm-password-icon"></i>
+                  </button>
+                </div>
+                {% for err in form.confirm_password.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+                
+                <div id="password-match-container" class="mt-2 d-none">
+                  <span id="password-match-badge" class="badge bg-danger password-match-badge">Passwords do not match</span>
+                </div>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-50" id="btn-prev"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                {{ form.submit(class="btn btn-success w-50", id="btn-submit") }}
+              </div>
+            </div>
+            
+          </div>
+        </form>
+
+        <hr class="my-4 text-muted opacity-25">
+        <div class="text-center">
+          <span class="small text-secondary d-block mb-2">Already have an account?</span>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-outline-success w-100">Log in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Parallax interactive cursor glow
+    const card = document.querySelector(".auth-card");
+    if (card) {
+      card.addEventListener("mousemove", function (e) {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty("--mouse-x", `${x}px`);
+        card.style.setProperty("--mouse-y", `${y}px`);
+      });
+    }
+
+    // Step elements and navigation controls
+    const nextBtn = document.getElementById("btn-next");
+    const prevBtn = document.getElementById("btn-prev");
+    const submitBtn = document.getElementById("btn-submit");
+    const form = document.getElementById("register-form");
+
+    // Inputs
+    const usernameInput = document.getElementById("username");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirm_password");
+
+    // Feedback containers
+    const usernameFeedback = document.getElementById("username-client-feedback");
+    const emailFeedback = document.getElementById("email-client-feedback");
+    const matchContainer = document.getElementById("password-match-container");
+    const matchBadge = document.getElementById("password-match-badge");
+
+    // Criteria items
+    const critLength = document.getElementById("crit-length");
+    const critLengthLong = document.getElementById("crit-length-long");
+    const critCapital = document.getElementById("crit-capital");
+    const critNumber = document.getElementById("crit-number");
+    const critSpecial = document.getElementById("crit-special");
+
+    // Criteria icons
+    const iconLength = document.getElementById("icon-length");
+    const iconLengthLong = document.getElementById("icon-length-long");
+    const iconCapital = document.getElementById("icon-capital");
+    const iconNumber = document.getElementById("icon-number");
+    const iconSpecial = document.getElementById("icon-special");
+
+    let currentStep = 1;
+
+    // Helper functions
+    function validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+
+    function checkStep1() {
+      let isValid = true;
+
+      // Username validation (>= 3 characters)
+      if (usernameInput.value.trim().length < 3) {
+        usernameInput.classList.add("is-invalid");
+        if (usernameFeedback) usernameFeedback.style.display = "block";
+        isValid = false;
+      } else {
+        usernameInput.classList.remove("is-invalid");
+        if (usernameFeedback) usernameFeedback.style.display = "none";
+      }
+
+      // Email validation
+      if (!validateEmail(emailInput.value.trim())) {
+        emailInput.classList.add("is-invalid");
+        if (emailFeedback) emailFeedback.style.display = "block";
+        isValid = false;
+      } else {
+        emailInput.classList.remove("is-invalid");
+        if (emailFeedback) emailFeedback.style.display = "none";
+      }
+
+      return isValid;
+    }
+
+    function checkStep2() {
+      let isValid = true;
+
+      // Password length >= 6 (matches WTForms backend requirement)
+      if (passwordInput.value.length < 6) {
+        passwordInput.classList.add("is-invalid");
+        isValid = false;
+      } else {
+        passwordInput.classList.remove("is-invalid");
+      }
+
+      // Password match validation
+      if (confirmInput.value.length > 0) {
+        matchContainer.classList.remove("d-none");
+        if (passwordInput.value === confirmInput.value) {
+          matchBadge.textContent = "Passwords match";
+          matchBadge.className = "badge bg-success password-match-badge";
+          confirmInput.classList.remove("is-invalid");
+        } else {
+          matchBadge.textContent = "Passwords do not match";
+          matchBadge.className = "badge bg-danger password-match-badge";
+          confirmInput.classList.add("is-invalid");
+          isValid = false;
+        }
+      } else {
+        matchContainer.classList.add("d-none");
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    function updateWizardProgress(direction) {
+      const step1 = document.getElementById("step-1");
+      const step2 = document.getElementById("step-2");
+
+      if (currentStep === 1) {
+        // Transition back to step 1
+        if (step2) {
+          step2.classList.remove("show");
+          setTimeout(() => {
+            step2.classList.remove("active");
+            step1.classList.add("active");
+            step1.classList.add("slide-in-left");
+            // trigger reflow
+            step1.offsetHeight;
+            step1.classList.remove("slide-in-left");
+            step1.classList.add("show");
+          }, 150);
+        }
+      } else {
+        // Transition next to step 2
+        if (step1) {
+          step1.classList.remove("show");
+          setTimeout(() => {
+            step1.classList.remove("active");
+            step2.classList.add("active");
+            step2.classList.add("slide-in-right");
+            // trigger reflow
+            step2.offsetHeight;
+            step2.classList.remove("slide-in-right");
+            step2.classList.add("show");
+            // Focus the password input
+            setTimeout(() => passwordInput.focus(), 150);
+          }, 150);
+        }
+      }
+    }
+
+    // Step 1 input event listeners to clear errors on typing
+    usernameInput.addEventListener("input", function () {
+      if (usernameInput.value.trim().length >= 3) {
+        usernameInput.classList.remove("is-invalid");
+        if (usernameFeedback) usernameFeedback.style.display = "none";
+      }
+    });
+
+    // Clear email errors
+    emailInput.addEventListener("input", function () {
+      if (validateEmail(emailInput.value.trim())) {
+        emailInput.classList.remove("is-invalid");
+        if (emailFeedback) emailFeedback.style.display = "none";
+      }
+    });
+
+    // Step 2 real-time validations
+    function updatePasswordCriteria() {
+      const val = passwordInput.value;
+
+      // 1. Length >= 6
+      toggleCriteria(val.length >= 6, critLength, iconLength);
+
+      // 2. Length >= 10
+      toggleCriteria(val.length >= 10, critLengthLong, iconLengthLong);
+
+      // 3. Capital
+      toggleCriteria(/[A-Z]/.test(val), critCapital, iconCapital);
+
+      // 4. Number
+      toggleCriteria(/[0-9]/.test(val), critNumber, iconNumber);
+
+      // 5. Special
+      toggleCriteria(/[^A-Za-z0-9]/.test(val), critSpecial, iconSpecial);
+
+      // Also validate match if confirm field is not empty
+      checkStep2();
+    }
+
+    function toggleCriteria(isValid, element, icon) {
+      if (isValid) {
+        element.classList.add("valid");
+        icon.className = "bi bi-check-circle-fill text-success";
+      } else {
+        element.classList.remove("valid");
+        icon.className = "bi bi-x-circle-fill text-danger";
+      }
+    }
+
+    passwordInput.addEventListener("input", updatePasswordCriteria);
+    confirmInput.addEventListener("input", checkStep2);
+
+    // Button event listeners
+    nextBtn.addEventListener("click", function () {
+      if (checkStep1()) {
+        currentStep = 2;
+        updateWizardProgress("next");
+      }
+    });
+
+    prevBtn.addEventListener("click", function () {
+      currentStep = 1;
+      updateWizardProgress("back");
+    });
+
+    // Prevent direct submit if current step is 1
+    form.addEventListener("submit", function (e) {
+      if (currentStep === 1) {
+        e.preventDefault();
+        if (checkStep1()) {
+          currentStep = 2;
+          updateWizardProgress("next");
+        }
+      } else {
+        const step1Valid = checkStep1();
+        const step2Valid = checkStep2();
+        if (!step1Valid || !step2Valid) {
+          e.preventDefault();
+          if (!step1Valid) {
+            currentStep = 1;
+            updateWizardProgress("back");
+          }
+        }
+      }
+    });
+
+    // Keyboard support: Pressing enter should advance wizard or submit appropriately
+    form.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        if (currentStep === 1) {
+          e.preventDefault();
+          nextBtn.click();
+        } else {
+          // Allow default form submission in step 2 if validity passes
+          if (!checkStep2() || !checkStep1()) {
+            e.preventDefault();
+          }
+        }
+      }
+    });
+
+    // Toggle password visibility
+    const togglePasswordBtn = document.getElementById("toggle-password");
+    const toggleConfirmPasswordBtn = document.getElementById("toggle-confirm-password");
+    const passwordIcon = document.getElementById("toggle-password-icon");
+    const confirmPasswordIcon = document.getElementById("toggle-confirm-password-icon");
+
+    if (togglePasswordBtn && passwordInput && passwordIcon) {
+      togglePasswordBtn.addEventListener("click", function () {
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          passwordIcon.classList.remove("bi-eye");
+          passwordIcon.classList.add("bi-eye-slash");
+        } else {
+          passwordInput.type = "password";
+          passwordIcon.classList.remove("bi-eye-slash");
+          passwordIcon.classList.add("bi-eye");
+        }
+      });
+    }
+
+    if (toggleConfirmPasswordBtn && confirmInput && confirmPasswordIcon) {
+      toggleConfirmPasswordBtn.addEventListener("click", function () {
+        if (confirmInput.type === "password") {
+          confirmInput.type = "text";
+          confirmPasswordIcon.classList.remove("bi-eye");
+          confirmPasswordIcon.classList.add("bi-eye-slash");
+        } else {
+          confirmInput.type = "password";
+          confirmPasswordIcon.classList.remove("bi-eye-slash");
+          confirmPasswordIcon.classList.add("bi-eye");
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

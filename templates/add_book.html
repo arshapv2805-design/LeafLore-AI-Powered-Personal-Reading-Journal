@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit book' if edit_mode else 'Add a book' }} · LeafLore{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <h3 class="mb-3">{{ 'Edit book' if edit_mode else 'Add a book' }}</h3>
+
+    {% if not edit_mode %}
+    <div class="mb-3 position-relative">
+      <label class="form-label">Search Google Books</label>
+      <input type="text" id="book-search" class="form-control" placeholder="Start typing a title…" autocomplete="off">
+      <div id="search-results" class="list-group position-absolute w-100 shadow-sm"></div>
+    </div>
+    <p class="text-secondary small">Or fill in the details manually below.</p>
+    {% endif %}
+
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">
+        {{ form.title.label(class="form-label") }}
+        {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), id="title") }}
+        {% for err in form.title.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ form.author.label(class="form-label") }}
+        {{ form.author(class="form-control", id="author") }}
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          {{ form.genre.label(class="form-label") }}
+          {{ form.genre(class="form-select", id="genre") }}
+        </div>
+        <div class="col-md-6 mb-3">
+          {{ form.total_pages.label(class="form-label") }}
+          {{ form.total_pages(class="form-control" + (" is-invalid" if form.total_pages.errors else ""), id="total_pages") }}
+          {% for err in form.total_pages.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="mb-3">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select") }}
+      </div>
+      {{ form.cover_url(id="cover_url") }}
+      {{ form.description(id="description") }}
+      <div class="d-flex gap-2">
+        {{ form.submit(class="btn btn-success") }}
+        <a href="{{ url_for('books.my_books') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if not edit_mode %}<script src="{{ url_for('static', filename='js/add_book.js') }}"></script>{% endif %}
+{% endblock %}

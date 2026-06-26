@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Settings · LeafLore{% endblock %}
+{% block content %}
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 text-primary" style="font-family: 'Fraunces', serif;">User Settings &amp; Preferences</h2>
+        <p class="text-secondary mb-0">Manage your profile, target goals, data, and access controls.</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Profile Preferences Form -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-person-gear text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Reading Preferences</h5>
+      </div>
+      <form method="POST" action="{{ url_for('dashboard.settings') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_profile">
+        
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Daily Reading Target (Pages)</label>
+          <input type="number" name="daily_target" class="form-control" value="{{ daily_target }}" min="1" required>
+          <div class="form-text text-muted small">Your target page log count for daily consistency streaks.</div>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="calm_mode_toggle" name="calm_mode" {% if calm_mode %}checked{% endif %}>
+          <label class="form-check-label small fw-semibold" for="calm_mode_toggle">Enable Calm Mode (Reduced Motion)</label>
+          <div class="form-text text-muted small">Pauses sways, particle animations, and reduces the Greenhouse Canvas load.</div>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-sm px-3">Save Preferences</button>
+      </form>
+    </div>
+
+    <!-- Yearly Goal Config -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-trophy text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Yearly Reading Goal</h5>
+      </div>
+      <form method="POST" action="{{ url_for('dashboard.settings') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update_goal">
+        
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Yearly Target (Books)</label>
+          <input type="number" name="target_books" class="form-control" value="{{ target_books }}" min="1" required>
+          <div class="form-text text-muted small">Enter the total number of books you want to complete this year.</div>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-sm px-3">Update Goal</button>
+      </form>
+    </div>
+
+    <!-- Data Portability (Backup / Export) -->
+    <div class="card card-body mb-4 shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-download text-success fs-4"></i>
+        <h5 class="mb-0 text-primary fw-bold" style="font-family: 'Fraunces', serif;">Data Portability &amp; Backups</h5>
+      </div>
+      <p class="text-secondary small mb-3">
+        Export your reading achievements, logs, and thoughts. Download complete, standard-format archives for backups or migration.
+      </p>
+      
+      <div class="d-grid d-md-flex gap-2">
+        <a href="{{ url_for('dashboard.export_logs') }}" class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-file-earmark-spreadsheet"></i> Export Logs (CSV)
+        </a>
+        <a href="{{ url_for('dashboard.export_notes') }}" class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-file-earmark-code"></i> Export Notes (Markdown)
+        </a>
+        <a href="{{ url_for('dashboard.export_archive') }}" class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-file-earmark-arrow-down"></i> Export Full Archive (JSON)
+        </a>
+      </div>
+    </div>
+
+    <!-- Reset Reading Data (Blank Slate) -->
+    <div class="card card-body mb-4 border border-warning shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-trash3 text-warning fs-4"></i>
+        <h5 class="mb-0 text-warning fw-bold" style="font-family: 'Fraunces', serif;">Reset Reading Data</h5>
+      </div>
+      <p class="text-secondary small mb-3">
+        Wipe all your books, reading progress, logs, notes, achievements, and statistics. This returns your account to a clean slate, but keeps your login credentials. <strong>This action cannot be undone.</strong>
+      </p>
+      
+      <form method="POST" action="{{ url_for('dashboard.settings') }}" onsubmit="return confirm('WARNING: Are you absolutely sure you want to delete all your books, reading history, and achievements? Your account data will be reset to a blank slate.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="reset_data">
+        <button type="submit" class="btn btn-warning btn-sm px-3 text-dark fw-semibold">Reset to Blank Slate</button>
+      </form>
+    </div>
+
+    <!-- Danger Zone (Delete Account) -->
+    <div class="card card-body mb-4 border border-danger shadow-sm">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+        <h5 class="mb-0 text-danger fw-bold" style="font-family: 'Fraunces', serif;">Danger Zone</h5>
+      </div>
+      <p class="text-secondary small mb-3">
+        Permanently delete your LeafLore profile. This will wipe all your books, notes, logs, goals, vocabulary, and achievements from our database. <strong>This action cannot be undone.</strong>
+      </p>
+      
+      <form method="POST" action="{{ url_for('dashboard.settings') }}" onsubmit="return confirm('WARNING: Are you absolutely sure you want to permanently delete your LeafLore account? This will erase all your books, reading history, and notes forever.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="delete_account">
+        <button type="submit" class="btn btn-danger btn-sm">Permanently Delete Account</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

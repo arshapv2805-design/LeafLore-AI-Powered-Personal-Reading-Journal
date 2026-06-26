@@ -1,0 +1,77 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ── Secrets & environment ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── Databases ─────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# ── Flask-Migrate ─────────────────────────────────────────────────────────────
+# Do NOT ignore migrations/ — commit migration files to git!
+# migrations/versions/*.py  ← tracked
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+test-results.xml
+bandit-report.json
+rendered_dashboard.html
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── ML models (large binary files — store in S3/GCS for prod) ────────────────
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+ml/models/*.pkl
+
+# ── Compiled assets ───────────────────────────────────────────────────────────
+static/dist/
+static/.webassets-cache/
+
+# ── Node (if any front-end tooling added later) ───────────────────────────────
+node_modules/
+.npm/
+
+# ── Portable tools ────────────────────────────────────────────────────────────
+git-portable/

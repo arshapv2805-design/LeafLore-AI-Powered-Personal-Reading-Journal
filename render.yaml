@@ -1,0 +1,34 @@
+# ─── Render.com IaC deployment config ────────────────────────────────────────
+# Commit this to your repo root. Render picks it up automatically when you
+# connect the GitHub repo. Adjust the `plan` and region as needed.
+
+services:
+  - type: web
+    name: leaflore
+    runtime: python
+    region: singapore          # closest to India; also: oregon, frankfurt
+    plan: free                 # free tier
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn wsgi:app --workers 2 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    autoDeploy: true           # deploy on every push to main
+
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true    # Render auto-generates a secure random value
+      - key: DATABASE_URL
+        fromDatabase:
+          name: leaflore-db
+          property: connectionString
+      - key: SENTRY_DSN
+        sync: false            # set manually in Render dashboard
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false
+
+databases:
+  - name: leaflore-db
+    databaseName: leaflore
+    plan: free
+    region: singapore

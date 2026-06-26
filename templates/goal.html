@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% block title %}Reading Goal · LeafLore{% endblock %}
+{% block content %}
+
+{% set stage_name = "" %}
+{% set stage_icon = "" %}
+{% set stage_class = "" %}
+{% set stage_desc = "" %}
+{% if not goal %}
+  {% set stage_name = "Seedling" %}
+  {% set stage_icon = "🌱" %}
+  {% set stage_class = "stage-seedling" %}
+  {% set stage_desc = "Pick a target below to start growing your reading habit!" %}
+{% elif progress_pct == 0 %}
+  {% set stage_name = "Seedling" %}
+  {% set stage_icon = "🌱" %}
+  {% set stage_class = "stage-seedling" %}
+  {% set stage_desc = "The journey begins. Water it by completing your first book!" %}
+{% elif progress_pct < 25 %}
+  {% set stage_name = "Seedling" %}
+  {% set stage_icon = "🌱" %}
+  {% set stage_class = "stage-seedling" %}
+  {% set stage_desc = "Your reading seed has sprouted roots. Keep reading!" %}
+{% elif progress_pct < 50 %}
+  {% set stage_name = "Sprout" %}
+  {% set stage_icon = "🌿" %}
+  {% set stage_class = "stage-sprout" %}
+  {% set stage_desc = "A healthy green shoot is reaching up. Well on your way!" %}
+{% elif progress_pct < 75 %}
+  {% set stage_name = "Sapling" %}
+  {% set stage_icon = "🌳" %}
+  {% set stage_class = "stage-sapling" %}
+  {% set stage_desc = "Branches are forming! You are building a powerful habit." %}
+{% elif progress_pct < 100 %}
+  {% set stage_name = "Oak Reader" %}
+  {% set stage_icon = "🌲" %}
+  {% set stage_class = "stage-oak" %}
+  {% set stage_desc = "A strong, majestic tree. Almost at the peak!" %}
+{% else %}
+  {% set stage_name = "Forest King" %}
+  {% set stage_icon = "👑" %}
+  {% set stage_class = "stage-king" %}
+  {% set stage_desc = "Incredible! Your reading garden is fully mature." %}
+{% endif %}
+
+<style>
+  /* Custom styled components for Goal page */
+  .goal-glass-card {
+    background: var(--bg-card);
+    backdrop-filter: var(--card-blur);
+    border: var(--card-border) !important;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .preset-card {
+    background: rgba(78, 163, 116, 0.03);
+    border: 1.5px solid var(--border-color);
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+  .preset-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-color);
+    background: rgba(78, 163, 116, 0.06);
+    box-shadow: 0 8px 20px rgba(78, 163, 116, 0.08);
+  }
+  .preset-card.active {
+    background: rgba(78, 163, 116, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(78, 163, 116, 0.15);
+  }
+  
+  .insight-badge-card {
+    background: rgba(78, 163, 116, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+  .insight-badge-card:hover {
+    background: rgba(78, 163, 116, 0.05);
+  }
+  
+  /* Animations for Plant Stages */
+  .stage-icon {
+    font-size: 2.8rem;
+    display: inline-block;
+  }
+  .stage-seedling {
+    animation: wiggle 2s infinite ease-in-out;
+  }
+  .stage-sprout {
+    animation: sway 3s infinite ease-in-out;
+    transform-origin: bottom center;
+  }
+  .stage-sapling {
+    animation: sway 4s infinite ease-in-out;
+    transform-origin: bottom center;
+  }
+  .stage-oak {
+    animation: pulseGrow 3.5s infinite ease-in-out;
+  }
+  .stage-king {
+    animation: goldGlow 2.5s infinite ease-in-out, bounce 1.8s infinite ease-in-out;
+  }
+  
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-6deg) scale(1.05); }
+    75% { transform: rotate(6deg) scale(1.05); }
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+  }
+  @keyframes pulseGrow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  @keyframes goldGlow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5)); }
+    50% { filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9)) saturate(1.3); }
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  
+  /* Custom Range Slider styling */
+  .custom-range {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: var(--border-color);
+    outline: none;
+    transition: background 0.2s;
+  }
+  .custom-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: transform 0.1s ease;
+  }
+  .custom-range::-webkit-slider-thumb:active {
+    transform: scale(1.2);
+  }
+  .custom-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: transform 0.1s ease;
+  }
+  .custom-range::-moz-range-thumb:active {
+    transform: scale(1.2);
+  }
+</style>
+
+<div class="row justify-content-center" style="animation: fadeInUp 0.4s ease both;">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 text-primary">{{ current_year }} Reading Goal</h2>
+        <p class="text-secondary mb-0">Set your annual target and nurture your reading tree.</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left"></i> Dashboard
+      </a>
+    </div>
+
+    <!-- Active Goal Showcase -->
+    {% if goal %}
+    <div class="card goal-glass-card border-0 p-4 mb-4" style="animation: fadeInUp 0.4s ease both; animation-delay: 0.05s;">
+      <div class="row align-items-center g-4">
+        <div class="col-md-4 text-center">
+          <div class="position-relative d-inline-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
+            <svg class="progress-gauge" width="130" height="130" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#206f19" />
+                  <stop offset="100%" stop-color="#4ec344" />
+                </linearGradient>
+                <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd700" />
+                  <stop offset="100%" stop-color="#ffa500" />
+                </linearGradient>
+              </defs>
+              <circle class="gauge-bg" cx="60" cy="60" r="50" fill="transparent" stroke="var(--border-color)" stroke-width="8" opacity="0.4" />
+              <circle class="gauge-fill" cx="60" cy="60" r="50" fill="transparent" 
+                      stroke="url(#{{ 'gold-grad' if progress_pct >= 100 else 'gauge-grad' }})" 
+                      stroke-width="8" stroke-dasharray="314.16" 
+                      stroke-dashoffset="{{ (314.16 - (progress_pct if progress_pct <= 100 else 100) / 100 * 314.16) | round(2) }}" 
+                      stroke-linecap="round" transform="rotate(-90 60 60)" style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);" />
+            </svg>
+            <div class="position-absolute d-flex flex-column align-items-center justify-content-center" style="top:0; left:0; width:100%; height:100%;">
+              <span class="stage-icon {{ stage_class }}">{{ stage_icon }}</span>
+              <span class="fw-bold mt-1 text-primary" style="font-size: 0.9rem; line-height: 1;">{{ progress_pct }}%</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <h4 class="mb-0 fw-bold text-success">{{ stage_name }} Stage</h4>
+            <span class="badge bg-success-subtle text-success-emphasis">Active Challenge</span>
+          </div>
+          <p class="text-secondary small mb-3">{{ stage_desc }}</p>
+          <div class="progress mb-2" style="height: 8px; background: var(--border-color);">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: {{ progress_pct }}%"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center text-muted small" style="font-size: 0.78rem;">
+            <span><strong>{{ completed_count }}</strong> completed books</span>
+            <span>Target: <strong>{{ goal.target_books }}</strong> books</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card goal-glass-card border-0 p-4 mb-4 text-center" style="animation: fadeInUp 0.4s ease both; animation-delay: 0.05s;">
+      <div class="stage-icon stage-seedling mb-2">🌱</div>
+      <h5 class="fw-bold text-primary">No Active Goal Set</h5>
+      <p class="text-secondary small mb-0 mx-auto" style="max-width: 440px;">Select your reading target below to begin tracking your achievements and watching your reading tree grow!</p>
+    </div>
+    {% endif %}
+
+    <!-- Goal Setter Workspace -->
+    <div class="card goal-glass-card border-0 p-4" style="animation: fadeInUp 0.4s ease both; animation-delay: 0.1s;">
+      <h5 class="fw-bold text-primary mb-3">Adjust Your Goal</h5>
+      
+      <!-- Presets Grid -->
+      <div class="row g-2 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="preset-card p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center" data-target="6">
+            <span class="fs-3 mb-1">🌱</span>
+            <div class="fw-bold small text-primary">Casual</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">6 books / yr</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="preset-card p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center" data-target="12">
+            <span class="fs-3 mb-1">🌿</span>
+            <div class="fw-bold small text-primary">Consistent</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">12 books / yr</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="preset-card p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center" data-target="24">
+            <span class="fs-3 mb-1">🌳</span>
+            <div class="fw-bold small text-primary">Devoted</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">24 books / yr</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="preset-card p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center" data-target="52">
+            <span class="fs-3 mb-1">🦉</span>
+            <div class="fw-bold small text-primary">Scholar</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">52 books / yr</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Form -->
+      <form method="POST" id="goal-form">
+        {{ form.hidden_tag() }}
+        
+        <!-- Range Slider and Synchronized Value -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label small fw-semibold text-secondary mb-0">Annual Target</label>
+            <span class="fw-bold text-success" style="font-size: 1.1rem;"><span id="slider-val-display">6</span> books</span>
+          </div>
+          <input type="range" class="custom-range" id="goal-range" min="1" max="100" value="6">
+          
+          <!-- Hidden standard field populated by JS -->
+          <div class="d-none">
+            {{ form.target_books(id="target_books_input") }}
+          </div>
+          {% if form.target_books.errors %}
+            <div class="text-danger small mt-1">
+              {% for err in form.target_books.errors %}{{ err }} {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Calculated Live Insights Panel -->
+        <div class="row g-2 mb-4">
+          <div class="col-md-4">
+            <div class="insight-badge-card">
+              <div class="text-muted small" style="font-size: 0.75rem;">Monthly Pace</div>
+              <div class="fw-bold text-primary mt-1" id="insight-monthly">1.0 books</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="insight-badge-card">
+              <div class="text-muted small" style="font-size: 0.75rem;">Days per Book</div>
+              <div class="fw-bold text-primary mt-1" id="insight-days">30.4 days</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="insight-badge-card">
+              <div class="text-muted small" style="font-size: 0.75rem;">Daily Pages Needed</div>
+              <div class="fw-bold text-primary mt-1" id="insight-pages">11 pages</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-grid">
+          {{ form.submit(class="btn btn-success animate-btn shadow-sm py-2", id="submit-btn") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const rangeSlider = document.getElementById("goal-range");
+    const numInput = document.getElementById("target_books_input");
+    const displayVal = document.getElementById("slider-val-display");
+    const presetCards = document.querySelectorAll(".preset-card");
+    const submitBtn = document.getElementById("submit-btn");
+
+    const insightMonthly = document.getElementById("insight-monthly");
+    const insightDays = document.getElementById("insight-days");
+    const insightPages = document.getElementById("insight-pages");
+
+    // Initialize with existing form value or default
+    let initialVal = parseInt(numInput.value) || 6;
+    if (initialVal < 1) initialVal = 1;
+    if (initialVal > 100) initialVal = 100;
+
+    updateGoalValues(initialVal);
+
+    // Event listener: Range Slider change
+    rangeSlider.addEventListener("input", function () {
+      updateGoalValues(parseInt(this.value));
+    });
+
+    // Event listener: Preset Cards click
+    presetCards.forEach(card => {
+      card.addEventListener("click", function () {
+        const val = parseInt(this.dataset.target);
+        updateGoalValues(val);
+        // Micro-animation click feedback
+        this.classList.add("animate__animated", "animate__pulse");
+        setTimeout(() => {
+          this.classList.remove("animate__animated", "animate__pulse");
+        }, 500);
+      });
+    });
+
+    function updateGoalValues(val) {
+      rangeSlider.value = val;
+      numInput.value = val;
+      displayVal.textContent = val;
+
+      // Update active state in preset cards
+      presetCards.forEach(card => {
+        if (parseInt(card.dataset.target) === val) {
+          card.classList.add("active");
+        } else {
+          card.classList.remove("active");
+        }
+      });
+
+      // Calculate live insights
+      const booksPerMonth = (val / 12).toFixed(1);
+      const daysPerBook = (365 / val).toFixed(1);
+      const pagesPerDay = Math.ceil((val * 320) / 365);
+
+      insightMonthly.textContent = `${booksPerMonth} books`;
+      insightDays.textContent = `${daysPerBook} days`;
+      insightPages.textContent = `${pagesPerDay} pages`;
+      
+      // Update submit button text dynamically for aesthetics
+      submitBtn.value = `Confirm ${val} Books Goal`;
+    }
+  });
+</script>
+{% endblock %}

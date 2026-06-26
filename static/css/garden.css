@@ -1,0 +1,127 @@
+/* garden.css — Greenhouse Canvas & Seed Picker styles */
+
+/* ─── Canvas Container ─────────────────────────────────────────────────────── */
+.greenhouse-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  margin-bottom: 0;
+  background: transparent;
+}
+
+#greenhouse-canvas {
+  display: block;
+  width: 100%;
+  height: 175px;
+  border-radius: 10px 10px 0 0;
+  transition: opacity 0.4s ease;
+}
+
+.greenhouse-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(to top, var(--bg-card) 30%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ─── Seed Picker ──────────────────────────────────────────────────────────── */
+.seed-picker-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 4px 10px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+
+.seed-picker-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin-right: 2px;
+}
+
+.seed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.seed-pill:hover:not(:disabled) {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(32, 111, 25, 0.08);
+  transform: translateY(-1px);
+}
+
+.seed-pill.active {
+  border-color: var(--accent-green);
+  background: rgba(32, 111, 25, 0.15);
+  color: var(--accent-green);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(32, 111, 25, 0.18);
+}
+
+.seed-pill.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+/* ─── Calm Mode: disable canvas animation ──────────────────────────────────── */
+.calm-mode #greenhouse-canvas {
+  opacity: 0.75;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 576px) {
+  #greenhouse-canvas {
+    height: 130px;
+  }
+
+  .seed-picker-label {
+    display: none;
+  }
+
+  .seed-pill {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+  }
+}
+
+/* ─── Streak Achievement Pulse on Canvas ───────────────────────────────────── */
+@keyframes streakPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 170, 0, 0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(255, 170, 0, 0.25); }
+}
+
+.greenhouse-wrap.has-streak {
+  animation: streakPulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greenhouse-wrap.has-streak {
+    animation: none;
+  }
+}

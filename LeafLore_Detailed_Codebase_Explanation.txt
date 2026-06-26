@@ -1,0 +1,303 @@
+================================================================================
+LEAFLORE -- DETAILED CODEBASE EXPLANATION & ARCHITECTURAL GUIDE FOR BEGINNERS
+================================================================================
+
+Welcome to the LeafLore Developer's Codebase Guide! This document provides a 
+detailed, file-by-file explanation of how the application is designed, what 
+every file does, and how they connect to form the complete LeafLore system.
+
+--------------------------------------------------------------------------------
+PART 1: THE ARCHITECTURE (HOW FLASK ORGANIZES THE CODE)
+--------------------------------------------------------------------------------
+LeafLore uses a pattern called the "Application Factory Pattern" combined with 
+"Blueprints" in Flask.
+
+1. The Application Factory (app.py): Instead of creating a global application 
+   object immediately, we define a function `create_app()` that configures 
+   and returns a Flask application instance. This makes it easy to run the 
+   app under different configurations (like Development, Testing, or Production).
+2. Blueprints (inside the routes/ folder): Blueprints are like sub-modules that 
+   allow us to group related routes (URLs) together. For example, all routes 
+   concerning user registration and login are grouped in `routes/auth.py`.
+3. Models (inside the models/ folder): These are Python classes that map to 
+   database tables using SQLAlchemy (an Object Relational Mapper, or ORM).
+4. Templates & Static Files: 
+   * Templates (inside templates/) contain Jinja2 HTML layouts.
+   * Static files (inside static/) contain CSS stylesheets, browser client-side 
+     JavaScript scripts, service worker scripts, and icons.
+
+--------------------------------------------------------------------------------
+PART 2: FILE-BY-FILE CODEBASE DEEP-DIVE
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+1. PROJECT ROOT FILES (The Configuration and Entry Points)
+--------------------------------------------------------------------------------
+
+* wsgi.py
+  - What it is: The web server gateway interface entry point.
+  - How it works: When Gunicorn (or your local web server) runs LeafLore, it 
+    imports the `app` object created by calling `create_app()` from app.py.
+  - Why it is here: Keeps your server configuration decoupled from your main 
+    application factory code.
+
+* app.py
+  - What it is: The heart of the application. It bootstraps all features.
+  - How it works: 
+    * Resolves environment configuration class (Dev, Testing, Prod).
+    * Initialises Sentry error tracking if a Sentry DSN is present.
+    * Configures Flask-Talisman to inject secure HTTP headers and force HTTPS.
+    * Sets up Flask-Limiter for rate-limiting.
+    * Integrates WhiteNoise to compress and serve static files.
+    * Registers all database model instances and blueprints.
+    * Adds global response headers (like clickjacking & CSP protections).
+    * Registers the /sw.js, /manifest.json, and /offline.html routes so the 
+      browser can find PWA resources.
+
+* config.py
+  - What it is: Configures configurations for different execution environments.
+  - How it works:
+    * Loads environment variables from a `.env` file (if running locally).
+    * Configures SQLite as a local fallback database, but defaults to a 
+      PostgreSQL connection string for production.
+    * Auto-translates old `postgres://` connection strings (commonly used by 
+      Render and Heroku) to the modern SQL-compliant `postgresql://`.
+    * Implements validation guards in production (fails early if keys like 
+      SECRET_KEY or DATABASE_URL are not set).
+
+* extensions.py
+  - What it is: Declares shared extension instances.
+  - How it works: Instantiates extensions (`db`, `login_manager`, `csrf`, 
+    `migrate`, `limiter`) without binding them to a specific app object.
+  - Why it is here: Avoids circular imports. Blueprints can safely import `db` 
+    from extensions.py, and app.py can safely import them to call `.init_app()`.
+
+* forms.py
+  - What it is: Web form validation scripts using WTForms.
+  - How it works: Declares form structures (like `GoalForm`) with input types 
+    and validations (e.g. integer bounds, mandatory presence) so we do not have 
+    to write verbose manual string-validation checks inside routes.
+
+* utils.py
+  - What it is: Helper scripts that handle calculations.
+  - How it works:
+    * `get_streak(user_id)`: Iterates through daily page logs to check if the 
+      user read today or yesterday, keeping track of consecutive days.
+    * `goal_progress(user_id)`: Evaluates reading stats against the current year's 
+      goal target.
+    * `check_new_achievements(user_id)`: Scans stats (streak, total pages, notes) 
+      to see if a user has unlocked a new reading milestone.
+
+* render.yaml
+  - What it is: Infrastructure-as-code file for Render.com.
+  - How it works: Tells Render to create a free Web service and a free 
+    PostgreSQL database, setting up connections and build instructions automatically.
+
+--------------------------------------------------------------------------------
+2. MODELS DIRECTORY (The Database Schema)
+--------------------------------------------------------------------------------
+Located in `models/` directory (mapped in `models/__init__.py`).
+
+* User (models/user.py)
+  - Fields: `id`, `username`, `email`, `password_hash`, `created_at`, `is_admin`.
+  - How it works: Integrates UserMixin from Flask-Login so user sessions can 
+    be easily authenticated, managed, and guarded. Includes role-based checks.
+
+* Book (models/book.py)
+  - Fields: `id`, `user_id`, `title`, `author`, `genre`, `total_pages`, 
+    `status` (want-to-read/reading/completed), `rating`, `date_added`, 
+    `date_completed`.
+  - How it works: Connects reading logs and chapter notes to a specific user.
+
+* ReadingLog (models/log.py)
+  - Fields: `id`, `book_id`, `pages_read`, `date`, `is_focus`, `duration_seconds`.
+  - How it works: Represents a single entry of pages read for a book on a 
+    particular calendar day.
+
+* Goal (models/goal.py)
+  - Fields: `id`, `user_id`, `year`, `target_books`.
+  - How it works: Represents the user's reading goal target (number of completed 
+    books) for the year.
+
+* Note (models/note.py)
+  - Fields: `id`, `book_id`, `title`, `content`, `created_at`.
+  - How it works: Plain-text journaling linked to a specific book.
+
+* VocabularyWord (models/vocabulary.py)
+  - Fields: `id`, `user_id`, `word`, `definition`, `context`, `created_at`.
+  - How it works: Dictionary cards added by users to bookmark words.
+
+--------------------------------------------------------------------------------
+2.5. TEMPLATES DIRECTORY (The Jinja2 Views)
+--------------------------------------------------------------------------------
+Located in `templates/` directory.
+
+* base.html
+  - What it is: The master layout template.
+  - How it works: Defines the header navbar, the theme toggler, the mobile-first 
+    sticky bottom navigation bar, toast alert structures, and generic scripts.
+
+* dashboard.html
+  - What it is: The central user homepage.
+  - How it works: Houses the HTML5 Greenhouse Garden canvas, the Focus Oasis (Pomodoro timer + ambient soundscape mixer), the AJAX Quick Log form, the active reading streak, the yearly progress circle, the reading activity heatmap, the unlockable achievements grid, and the 6-slide interactive welcome onboarding tour modal.
+
+* insights.html
+  - What it is: Dedicated analytics portal.
+  - How it works: Holds advanced stats, weekly trends, monthly history, reading 
+    velocities, and AI recommendations.
+
+* settings.html
+  - What it is: User configurations view.
+  - How it works: Allows editing of page targets, toggling Calm Mode, initiating 
+    data backups/exports, and resetting data or deleting accounts.
+
+* admin_dashboard.html
+  - What it is: Unified admin control center.
+  - How it works: Displays operations health metrics and a registered user 
+    management table with administrative action tools.
+
+* my_books.html
+  - What it is: Reading library shelf.
+  - How it works: Renders the 3D book spine library, search tools, sort selectors, 
+    filter tabs, and PWA IndexedDB sync badges.
+
+* book_detail.html
+  - What it is: Detailed book workspace.
+  - How it works: Displays individual book details, reading progress bar, focus reading speed insights, ML-powered remaining time predictions, a manual log today form, and shortcuts to notes and word banks.
+
+* notes.html & vocabulary.html:
+  - What it is: Reading logs.
+  - How it works: Dedicated workspaces for chapter reflections and bookmarks.
+
+--------------------------------------------------------------------------------
+3. ROUTES DIRECTORY (The Controller Blueprints)
+--------------------------------------------------------------------------------
+Located in `routes/` directory.
+
+* auth.py
+  - Routes: `/register`, `/login`, `/logout`.
+  - How it works: Registers users, validates email availability, logs in users, 
+    and handles secure session destruction. Utilises `Flask-Limiter` to enforce 
+    rate limits against authentication brute-force attacks.
+
+* books.py
+  - Routes: `/books/add`, `/books/<id>/edit`, `/books/<id>/delete`, etc.
+  - How it works: Displays shelves, handles manual additions or Google Books 
+    searches, and toggles book statuses.
+
+* logs.py
+  - Routes: `/logs/add`, `/logs/<id>/delete`.
+  - How it works: Processes manual page logging, checks that users don't log 
+    future dates, updates streaks, and triggers achievement checks.
+
+* notes.py
+  - Routes: `/notes/add`, `/notes/<id>/edit`, `/notes/<id>/delete`.
+  - How it works: Simple CRUD logic for book-linked notes.
+
+* vocabulary.py
+  - Routes: `/vocabulary/`, `/vocabulary/add`, `/vocabulary/<id>/delete`.
+  - How it works: Allows users to add vocabulary words.
+
+* dashboard.py
+  - Routes: `/dashboard/`, `/dashboard/wrap`, `/dashboard/goal`, `/dashboard/insights`, `/dashboard/settings`, `/dashboard/settings/export/logs`, `/dashboard/settings/export/notes`, `/dashboard/settings/export/archive`.
+  - How it works:
+    * `/dashboard/`: Serves as the central homepage displaying stats, progress circles, and the garden canvas.
+    * `/wrap`: Yearly wrap-up review displaying active reading metrics, milestones, and favorite genres.
+    * `/goal`: Form interface to set or update yearly reading goals.
+    * `/insights`: Dedicated page showing monthly page series graphs, average reading pace, and ML recommendations.
+    * `/settings`: Allows users to configure daily reading targets and toggle Calm Mode.
+    * `/settings/export/*`: Downloads user logs (CSV), notes (Markdown), or full backup archives (JSON).
+    * `/api/seed-demo`: Erases current data and injects a mock history of books, notes, and log dates so developers can immediately test the app.
+    * `/api/offline-sync`: Integrates offline compatibility. Receives batches of locally-queued actions from the client and writes them to the DB.
+    * `/admin/health` (deprecated): Redirects to the new dedicated `/admin` blueprint.
+    * `/settings` actions: Added support for `reset_data` to reset user books, progress, achievements, and stats to a blank slate.
+
+* admin.py
+  - Routes: `/admin/`, `/admin/toggle-role/<id>`, `/admin/delete-user/<id>`, `/admin/reset-user-data/<id>`, `/admin/seed-user-demo/<id>`, `/admin/impersonate/<id>`.
+  - How it works:
+    * Dedicated admin controls for managing registered user profiles and checking global operations diagnostics.
+    * Uses `@admin_required` decorator to restrict access to administrators.
+
+--------------------------------------------------------------------------------
+4. MACHINE LEARNING DIRECTORY (The Analytics & Recommender)
+--------------------------------------------------------------------------------
+Located in `ml/` directory.
+
+* analytics.py
+  - How it works: Aggregates daily reading logs using pandas. Generates monthly 
+    trends, average reading paces, and calculates monthly progress differences 
+    for charts.
+
+* recommender.py
+  - How it works: Analyzes genres of books on the user's shelves and recommends 
+    similar books (or defaults to standard popular books if there is no data).
+
+* completion_predictor.py
+  - How it works: 
+    * Features: Collects progress percentage, pages read per session, number of 
+      associated notes, and focus session counts.
+    * ML Model: Fits a Scikit-Learn Logistic Regression model on the user's 
+      completed books data to output a percentage probability of finishing the 
+      book.
+    * Fallback: If there are fewer than 5 completed books, it runs a heuristic 
+      formula that estimates finish probability based on current pace.
+
+--------------------------------------------------------------------------------
+5. STATIC WEB ASSETS (The Canvas & PWA Engine)
+--------------------------------------------------------------------------------
+Located in `static/` directory.
+
+* static/js/garden_canvas.js
+  - How it works: This is the renderer for the Virtual Greenhouse. It draws 
+    ground plants, growing trees, and animated particles on an HTML5 canvas.
+    * It reads user data dynamically injected by Flask.
+    * Adapts color palettes, foliage densities, sways, and backgrounds based 
+      on the active theme (Forest, Autumn, Zen, etc.).
+    * Disables particle physics and wind sways when "Calm Mode" is toggled.
+
+* static/js/offline_sync.js
+  - How it works: Handles PWA behaviors on the client:
+    * Registers the `sw.js` service worker.
+    * Toggles local client networks.
+    * If internet drops, it displays the offline warning banner and saves all 
+      log postings inside an IndexedDB local database instance.
+    * Monitors internet recovery, firing automatic POST requests to upload 
+      queued records when the connection comes back online.
+
+* static/sw.js
+  - How it works: The Service Worker script. 
+    * Intercepts network requests made by the browser.
+    * Caches CSS, JS, and image assets (Cache-First strategy) for offline access.
+    * Uses a Network-First strategy for pages so users see current data when online.
+    * Serves `offline.html` if navigation fails completely.
+
+* static/manifest.json
+  - How it works: PWA configuration metadata defining application icons, name, 
+    start URL, background color, and standalone mobile app display wrappers.
+
+--------------------------------------------------------------------------------
+PART 3: DATA FLOW EXAMPLE (Logging a page read)
+--------------------------------------------------------------------------------
+Here is what happens step-by-step when you log pages read while ONLINE:
+1. You fill out the log form on the Dashboard page and hit submit.
+2. The browser sends a POST request with the form parameters to `/logs/add`.
+3. The route handler inside `routes/logs.py` intercepts the request:
+   * Validates the input pages and dates.
+   * Creates a new `ReadingLog` database record and saves it (`db.session.commit()`).
+   * Calls `get_streak(current_user.id)` to check if your streak increased.
+   * Calls `check_new_achievements(current_user.id)` to see if you unlocked a badge.
+4. The route redirects you back to the `/dashboard/`.
+5. Flask fetches the updated logs, calculates pace, runs the completion 
+   prediction, and loads the HTML.
+6. The HTML renders, and `garden_canvas.js` reads your updated stats, growing 
+   your plants taller instantly!
+
+Here is what happens when you log pages read while OFFLINE:
+1. You submit the form.
+2. `offline_sync.js` intercepts the form submission event, stopping the network request.
+3. The script packages the log details and writes them to the browser's IndexedDB.
+4. An amber offline banner slides down showing "1 queued log saved locally".
+5. When the internet comes back online, a window listener detects it, sends 
+   the queued log to `/dashboard/api/offline-sync`, and clears IndexedDB.
+6. The dashboard updates automatically!
+================================================================================
