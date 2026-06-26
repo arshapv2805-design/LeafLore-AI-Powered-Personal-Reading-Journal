@@ -1765,6 +1765,35 @@ html[data-theme="dark"] .mobile-bottom-nav {
   50% { transform: translateY(-6px); }
 }
 
+/* ---- Tables System Retheming ---- */
+.table {
+  --bs-table-bg: transparent !important;
+  --bs-table-hover-bg: rgba(45, 157, 36, 0.05) !important;
+  --bs-table-color: var(--text-main) !important;
+  --bs-table-hover-color: var(--text-main) !important;
+  --bs-table-border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.table th, .table td {
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.table thead th {
+  color: var(--text-muted) !important;
+  border-bottom: 2px solid var(--border-color) !important;
+}
+
+.table-light {
+  --bs-table-bg: rgba(255, 255, 255, 0.03) !important;
+  --bs-table-color: var(--text-main) !important;
+}
+html[data-theme="dark"] .table-light {
+  --bs-table-bg: rgba(0, 0, 0, 0.2) !important;
+  --bs-table-color: var(--text-main) !important;
+}
+
 
 
 
