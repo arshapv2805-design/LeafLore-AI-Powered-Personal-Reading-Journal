@@ -667,11 +667,12 @@ def settings():
             return redirect(url_for("dashboard.settings"))
             
         elif action == "delete_account":
-            user = current_user
+            user = db.session.get(User, current_user.id)
             from flask_login import logout_user
             logout_user()
-            db.session.delete(user)
-            db.session.commit()
+            if user:
+                db.session.delete(user)
+                db.session.commit()
             flash("Your LeafLore account has been permanently deleted.", "info")
             return redirect(url_for("auth.login"))
             
