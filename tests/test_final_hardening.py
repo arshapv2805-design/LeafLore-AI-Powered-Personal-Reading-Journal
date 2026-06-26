@@ -164,3 +164,16 @@ def test_reset_data(logged_in_client, logged_in_user_id):
     # 4. Verify session is cleared of achievements
     with logged_in_client.session_transaction() as sess:
         assert "unlocked_achievements" not in sess
+
+
+def test_delete_account(logged_in_client, logged_in_user_id):
+    """POST /dashboard/settings with action=delete_account deletes the user from database."""
+    r = logged_in_client.post("/dashboard/settings", data={
+        "action": "delete_account"
+    }, follow_redirects=True)
+    assert r.status_code == 200
+    assert b"permanently deleted" in r.data
+    
+    with logged_in_client.application.app_context():
+        assert db.session.get(User, logged_in_user_id) is None
+
