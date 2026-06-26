@@ -589,7 +589,23 @@ def insights():
     pace = reading_pace(current_user.id)
     
     # ML finish predictions
-    predictions = predicted_finish_dates(current_user.id)
+    raw_predictions = predicted_finish_dates(current_user.id)
+    predictions = []
+    from ml.completion_predictor import get_completion_prediction
+    for p in raw_predictions:
+        book = db.session.get(Book, p["book_id"])
+        if book:
+            prob, model_name = get_completion_prediction(book.id)
+            finish_date_str = p["finish_date"].strftime("%b %d, %Y") if isinstance(p["finish_date"], (date, datetime)) else str(p["finish_date"])
+            predictions.append({
+                "book_id": book.id,
+                "title": book.title,
+                "author": book.author or "Unknown Author",
+                "confidence_pct": prob,
+                "predicted_finish_date": finish_date_str,
+                "pace": p["pace"],
+                "days_needed": p["days_needed"]
+            })
     
     # Weekly trend pages
     weekly_trend_data = weekly_pages_series(current_user.id, days=7)
