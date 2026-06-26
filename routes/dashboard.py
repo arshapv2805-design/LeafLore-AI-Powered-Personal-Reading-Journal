@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, jsonify, request, redirect, url_fo
 from flask_login import login_required, current_user
 
 from extensions import db, csrf
-from models import Book, ReadingLog, Goal, Note, VocabularyWord
+from models import Book, ReadingLog, Goal, Note, VocabularyWord, User
 from forms import GoalForm
 from utils import get_streak, goal_progress, check_new_achievements
 from ml.analytics import monthly_pages_series, reading_pace, predicted_finish_dates, monthly_trend, weekly_pages_series
