@@ -64,6 +64,15 @@
         
         <h4 class="mb-4 text-center">Start your shelf</h4>
 
+        <div class="mb-4">
+          <label class="form-label small fw-semibold">Background Theme</label>
+          <select id="canvas-theme-select" class="form-select form-select-sm" onchange="changeCanvasTheme(this.value)">
+            <option value="leaves">Leaves (Drifting foliage)</option>
+            <option value="sakura">Sakura (Cherry blossom petals)</option>
+            <option value="nebula">Starry Nebula (Glowing space embers)</option>
+          </select>
+        </div>
+
         <form method="POST" novalidate id="register-form">
           {{ form.hidden_tag() }}
           <div class="wizard-overflow-container">

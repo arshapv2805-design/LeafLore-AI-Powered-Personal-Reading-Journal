@@ -10,6 +10,12 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    // Sync canvas theme select dropdown if it exists on the page
+    const canvasThemeSelect = document.getElementById("canvas-theme-select");
+    if (canvasThemeSelect) {
+      canvasThemeSelect.value = localStorage.getItem("leaflore-canvas-theme") || "leaves";
+    }
+
     // Add calm-mode class to body as well to ensure standard targets match
     if (currentCalm === "enabled") {
       document.body.classList.add("calm-mode");
@@ -98,4 +104,10 @@
       }, 250);
     }
   });
+
+  window.changeCanvasTheme = function (theme) {
+    if (window.LeafCanvas) {
+      window.LeafCanvas.setTheme(theme);
+    }
+  };
 })();
