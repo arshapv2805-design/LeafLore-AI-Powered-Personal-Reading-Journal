@@ -149,7 +149,7 @@
 
   <script>
     function checkOnline() {
-      if (navigator.onLine) return true;
+      if (navigator.onLine || location.hostname === 'localhost' || location.hostname === '127.0.0.1') return true;
       alert('Still offline. Please check your connection.');
       return false;
     }
